@@ -16,6 +16,10 @@
 
 当 AI Agent 需要人类介入（提问回答 `NEED_ANSWER`、高危操作审批 `NEED_APPROVAL`、异常报错 `ERROR`）时，HUD 会以高亮视觉聚焦提示，并支持通过开发板上的 **BOOT 实体物理按键** 一键确认回传给主机。
 
+<p align="center">
+  <img src="docs/images/dashboard_preview.png" alt="Workbuddy Bridge Dashboard Preview" width="100%">
+</p>
+
 ---
 
 ## 🚀 核心特性
