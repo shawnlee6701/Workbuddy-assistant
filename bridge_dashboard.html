@@ -643,7 +643,6 @@
       el('monitor-state-small').textContent = config.label;
       el('monitor-desc').textContent = data?.alert_desc || '正在监听 Workbuddy 本地状态';
       el('monitor-duration').textContent = `用时 ${data?.duration || '00:00'}`;
-      el('monitor-sync').textContent = `同步 ${data?.step || '实时'}`;
       el('monitor-task').textContent = data?.alert_title || '工作台就绪';
       const progress = data?.timeline?.[0]?.dur || data?.alert_desc || '等待新的任务';
       el('monitor-progress').textContent = `最新进度 · ${progress}`;

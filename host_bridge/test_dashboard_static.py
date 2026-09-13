@@ -1,4 +1,5 @@
 import os
+import re
 import unittest
 
 
@@ -19,6 +20,12 @@ class DashboardStaticTests(unittest.TestCase):
     def test_dashboard_fetch_uses_resolved_api_url(self):
         self.assertIn("fetch(BRIDGE_API_URL", self.html)
         self.assertNotIn("fetch('/api/bridge'", self.html)
+
+    def test_javascript_element_references_exist_in_markup(self):
+        markup_ids = set(re.findall(r'id="([^"]+)"', self.html))
+        script_element_ids = set(re.findall(r"el\('([^']+)'\)", self.html))
+        missing_ids = sorted(script_element_ids - markup_ids)
+        self.assertEqual([], missing_ids, f"JavaScript references missing DOM ids: {missing_ids}")
 
 
 if __name__ == "__main__":
