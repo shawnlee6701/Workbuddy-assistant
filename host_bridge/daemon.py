@@ -77,6 +77,11 @@ active_session_id = None
 task_start_time = time.time()
 ser = None
 dashboard_cache = {"expires_at": 0, "value": None}
+trace_usage_cache = {
+    "session_id": None,
+    "checked_at": 0.0,
+    "usage": None,
+}
 
 
 def compact_number(value):
@@ -111,6 +116,95 @@ def clean_model_name(model):
         if value.startswith(prefix):
             value = value[len(prefix):]
     return value or None
+
+
+def _nonnegative_int(value):
+    """将 Trace 用量字段安全归一化为非负整数。"""
+    try:
+        return max(0, int(value))
+    except (TypeError, ValueError, OverflowError):
+        return 0
+
+
+def parse_trace_usage(payload):
+    """从 Workbuddy Trace 中提取任务本轮 Token 凭据，不读取 Prompt 或模型输出。"""
+    if not isinstance(payload, dict):
+        return None
+
+    trace = payload.get("trace")
+    if not isinstance(trace, dict):
+        return None
+
+    model_info = trace.get("modelInfo")
+    if not isinstance(model_info, dict):
+        model_info = {}
+
+    input_tokens = _nonnegative_int(model_info.get("totalInputTokens"))
+    output_tokens = _nonnegative_int(model_info.get("totalOutputTokens"))
+    cached_tokens = _nonnegative_int(model_info.get("totalCachedTokens"))
+    total_tokens = _nonnegative_int(trace.get("totalTokens"))
+    if total_tokens == 0 and (input_tokens or output_tokens):
+        total_tokens = input_tokens + output_tokens
+    if total_tokens == 0:
+        return None
+
+    usage = {
+        "total": total_tokens,
+        "total_label": compact_number(total_tokens),
+        "input": input_tokens,
+        "input_label": compact_number(input_tokens),
+        "output": output_tokens,
+        "output_label": compact_number(output_tokens),
+        "cached": cached_tokens,
+        "cached_label": compact_number(cached_tokens),
+        "calls": _nonnegative_int(model_info.get("callCount")),
+        "trace_id": trace.get("traceId") or None,
+        "ended_at": trace.get("endedAt") or None,
+    }
+    return {key: value for key, value in usage.items() if value not in (None, "")}
+
+
+def get_session_trace_usage(session_id, refresh_after=1.0):
+    """按 sessionId 精确匹配最新任务 Trace，避免串入其他会话的 Token。"""
+    global trace_usage_cache
+    if not session_id:
+        return None
+
+    now = time.time()
+    if trace_usage_cache.get("session_id") == session_id:
+        cached_usage = trace_usage_cache.get("usage")
+        # 已经完成的 Trace 是不可变凭据，命中后无需反复扫描。
+        if cached_usage and cached_usage.get("ended_at"):
+            return cached_usage
+        if now - trace_usage_cache.get("checked_at", 0) < refresh_after:
+            return cached_usage
+
+    try:
+        paths = glob.glob(os.path.join(SYSTEM_TRACES, "*", "*.json"))
+        paths.sort(key=os.path.getmtime, reverse=True)
+    except OSError:
+        paths = []
+
+    usage = None
+    for path in paths:
+        try:
+            with open(path, "r", encoding="utf-8") as trace_file:
+                payload = json.load(trace_file)
+            trace = payload.get("trace") if isinstance(payload, dict) else None
+            if not isinstance(trace, dict) or trace.get("sessionId") != session_id:
+                continue
+            usage = parse_trace_usage(payload)
+            if usage:
+                break
+        except (OSError, ValueError, AttributeError):
+            continue
+
+    trace_usage_cache = {
+        "session_id": session_id,
+        "checked_at": now,
+        "usage": usage,
+    }
+    return usage
 
 
 def get_trace_summary():
@@ -485,6 +579,7 @@ def get_system_live_status():
 
         return {
             "session_id": sess_id,
+            "session_status": str(status or "").lower(),
             "state": state,
             "title": title,
             "desc": desc,
@@ -512,6 +607,8 @@ def sync_status():
         if sess_id != active_session_id:
             active_session_id = sess_id
             task_start_time = now
+            current_status["tokens"] = "0"
+            current_status.pop("token_usage", None)
             changed = True
 
         new_state = sys_state["state"]
@@ -519,11 +616,17 @@ def sync_status():
         new_desc = sys_state["desc"]
         new_model = sys_state.get("model")
         tool_count_str = f"{sys_state['tool_count']} 次"
+        usage = None
+        if sys_state.get("session_status") == "completed":
+            usage = get_session_trace_usage(sess_id)
+        previous_total = (current_status.get("token_usage") or {}).get("total")
+        next_total = usage.get("total") if usage else None
 
         if (current_status.get("state") != new_state or 
             current_status.get("alert_title") != new_title or 
             current_status.get("alert_desc") != new_desc or
-            current_status.get("model") != new_model):
+            current_status.get("model") != new_model or
+            previous_total != next_total):
             changed = True
             logging.info(f"⚡ [自动感知] [{new_state}] {new_title} ({new_desc})")
 
@@ -537,9 +640,21 @@ def sync_status():
             current_status["model"] = new_model
         else:
             current_status.pop("model", None)
+        if usage:
+            current_status["tokens"] = usage["total_label"]
+            current_status["token_usage"] = {
+                key: value for key, value in usage.items()
+                if key not in {"trace_id", "ended_at"}
+            }
+        elif sys_state.get("session_status") != "completed":
+            current_status["tokens"] = "0"
+            current_status.pop("token_usage", None)
         current_status["timeline"] = [
             {"text": new_title, "dur": new_desc, "done": new_state == "COMPLETED", "active": new_state == "RUNNING"}
         ]
+
+        if changed:
+            dashboard_cache["expires_at"] = 0
 
     return changed
 

@@ -33,6 +33,7 @@
 4. **双模中继与 Web 聚合看板**：
    - **自动感知中继 (Auto-Sensor Live Engine)**：后台常驻守护进程，自动监听工作区会话数据库与 Traces，无需手动打桩即可同步任务动态。
    - **Web 数据看板**：提供 `http://127.0.0.1:5200/bridge` 数据聚合看板与 `/monitor` 网页 HUD 映射。
+   - **完成 Token 凭据**：任务完成后按 `sessionId` 匹配真实 Trace，在 HUB 展示本轮总 Token 及输入、输出、缓存命中与模型调用数。
 
 ---
 

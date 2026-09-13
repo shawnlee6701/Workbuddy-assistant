@@ -201,6 +201,37 @@
       border-radius: 6px;
       background: rgba(89,220,236,.055);
     }
+    .token-receipt {
+      position: relative;
+      width: min(100%, 520px);
+      margin-top: 16px;
+      padding: 14px 16px 13px;
+      overflow: hidden;
+      border: 1px solid rgba(95,242,186,.2);
+      border-left: 3px solid var(--mint);
+      border-radius: 4px 13px 13px 4px;
+      background: linear-gradient(115deg, rgba(95,242,186,.075), rgba(16,26,23,.52));
+      box-shadow: inset 0 1px rgba(255,255,255,.025);
+    }
+    .token-receipt::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 74px;
+      height: 100%;
+      opacity: .12;
+      background: repeating-linear-gradient(125deg, transparent 0 7px, var(--mint) 7px 8px);
+      pointer-events: none;
+    }
+    .token-receipt-head, .token-breakdown { display: flex; align-items: center; }
+    .token-receipt-head { position: relative; z-index: 1; justify-content: space-between; gap: 18px; }
+    .token-receipt-label { color: #71817b; font: 750 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .13em; }
+    .token-receipt-total { color: var(--mint); font: 750 23px/1 "DIN Condensed", "Avenir Next Condensed", sans-serif; letter-spacing: .02em; }
+    .token-receipt-total small { margin-left: 5px; color: #71817b; font: 700 8px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .08em; }
+    .token-breakdown { position: relative; z-index: 1; flex-wrap: wrap; gap: 8px 18px; margin-top: 11px; }
+    .token-breakdown span { color: #71817b; font-size: 10px; }
+    .token-breakdown b { margin-left: 4px; color: #b8c8c3; font: 650 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
 
     .monitor-wrap {
       display: grid;
@@ -275,8 +306,9 @@
       -webkit-line-clamp: 2;
     }
     .monitor-rule { height: 1px; margin: 16px 0 12px; background: #1e2926; }
-    .monitor-metrics { color: #66736f; font: 700 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .monitor-metrics { gap: 8px; color: #66736f; font: 700 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
     .monitor-metrics strong { color: var(--state-color, var(--mint)); }
+    .monitor-token { color: var(--mint); }
     .monitor-task-label { margin-top: 15px; color: #52605c; font-size: 9px; letter-spacing: .1em; }
     .monitor-task { margin-top: 5px; overflow: hidden; color: #dce6e3; font-size: 11px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
     .monitor-foot { margin-top: 15px; color: #596662; font: 600 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
@@ -482,6 +514,10 @@
           <div class="hero-live-title" id="hero-live-title">等待 Workbuddy 信号</div>
           <div class="hero-live-desc" id="hero-live-desc">正在连接本地 Bridge…</div>
           <div class="hero-live-model" id="hero-live-model" hidden></div>
+          <div class="token-receipt" id="hero-live-usage" title="缓存 Token 已包含在输入与总量内" hidden>
+            <div class="token-receipt-head"><span class="token-receipt-label" id="hero-token-label">本轮完成凭据</span><strong class="token-receipt-total"><span id="hero-token-total">—</span><small>TOKENS</small></strong></div>
+            <div class="token-breakdown"><span>输入 <b id="hero-token-input">—</b></span><span>输出 <b id="hero-token-output">—</b></span><span>缓存命中 <b id="hero-token-cached">—</b></span><span id="hero-token-calls-wrap">模型调用 <b id="hero-token-calls">—</b></span></div>
+          </div>
         </div>
       </div>
 
@@ -493,7 +529,7 @@
             <div class="monitor-state" id="monitor-state">连接中</div>
             <div class="monitor-desc" id="monitor-desc">正在读取本地实时状态总线</div>
             <div class="monitor-rule"></div>
-            <div class="monitor-metrics"><strong id="monitor-state-small">同步中</strong><span id="monitor-duration">用时 --:--</span><span id="monitor-sync">同步 实时</span></div>
+            <div class="monitor-metrics"><strong id="monitor-state-small">同步中</strong><span id="monitor-duration">用时 --:--</span><span class="monitor-token" id="monitor-tokens" hidden>TOKENS —</span><span id="monitor-sync">同步 实时</span></div>
             <div class="monitor-task-label">当前任务</div>
             <div class="monitor-task" id="monitor-task">等待数据</div>
             <div class="monitor-foot"><span id="monitor-progress">最新进度 · —</span><span>LIVE</span></div>
@@ -587,6 +623,8 @@
       const parts = String(value || '').split('-');
       return parts.length === 3 ? `${Number(parts[1])}/${Number(parts[2])}` : value;
     };
+    const formatTokenExact = value => Number(value || 0).toLocaleString('en-US');
+    const formatTokenCompact = (value, label) => label || new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(Number(value || 0));
 
     function renderLive(data) {
       const state = String(data?.state || 'IDLE').toUpperCase();
@@ -608,6 +646,21 @@
       el('monitor-model').hidden = !model;
       el('hero-live-model').textContent = model ? `MODEL · ${model}` : '';
       el('hero-live-model').hidden = !model;
+
+      const usage = data?.token_usage;
+      const hasUsage = Number(usage?.total) > 0;
+      el('hero-live-usage').hidden = !hasUsage;
+      el('monitor-tokens').hidden = !hasUsage;
+      if (hasUsage) {
+        el('hero-token-label').textContent = state === 'COMPLETED' ? '本轮完成凭据' : '最近完成任务';
+        el('hero-token-total').textContent = formatTokenExact(usage.total);
+        el('hero-token-input').textContent = formatTokenExact(usage.input);
+        el('hero-token-output').textContent = formatTokenExact(usage.output);
+        el('hero-token-cached').textContent = formatTokenExact(usage.cached);
+        el('hero-token-calls').textContent = formatTokenExact(usage.calls);
+        el('hero-token-calls-wrap').hidden = !(Number(usage.calls) > 0);
+        el('monitor-tokens').textContent = `TOKENS ${formatTokenCompact(usage.total, usage.total_label)}`;
+      }
     }
 
     function renderMetrics(today) {
