@@ -32,6 +32,7 @@ struct HudData {
     String toolsStr = "0 次";
     String durationStr = "00:00";
     String tokenStr = "0k";
+    String todayTokenStr = "0m";
     String modelName = "";
     
     std::vector<TimelineItem> timeline;

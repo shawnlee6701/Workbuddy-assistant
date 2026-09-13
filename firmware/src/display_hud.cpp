@@ -129,16 +129,34 @@ void DisplayHud::drawMetricsGrid(const HudData& data) {
     
     _canvas.drawFastHLine(12, 124, 296, COLOR_BORDER);
     
-    // 指标栏左侧 Label 颜色与当前状态 100% 对应
     _canvas.setTextSize(1);
+    
+    // 1. 状态
     _canvas.setTextColor(stateColor, COLOR_BG);
     _canvas.drawString(data.stateText, 12, 136);
 
+    // 2. 用时
     _canvas.setTextColor(COLOR_TEXT_WHITE, COLOR_BG);
-    _canvas.drawString("用时 " + data.durationStr, 96, 136);
+    _canvas.drawString("用时 " + data.durationStr, 70, 136);
 
+    // 3. 本轮消耗 Token
+    String sToken = data.tokenStr;
+    sToken.trim();
+    if (sToken.isEmpty() || sToken == "0k" || sToken == "0.0k") sToken = "0";
+    String sessionStr = "本轮 " + sToken;
     _canvas.setTextColor(COLOR_STATE_RUNNING, COLOR_BG);
-    _canvas.drawString("同步 " + data.stepStr, 232, 136);
+    _canvas.drawString(sessionStr, 155, 136);
+
+    // 4. 今日累计 Token
+    String tToken = data.todayTokenStr;
+    tToken.trim();
+    if (tToken.isEmpty() || tToken == "0m" || tToken == "0k") tToken = sToken;
+    String todayStr = "今日 " + tToken;
+    int32_t todayX = 308 - _canvas.textWidth(todayStr);
+    if (todayX < 235) todayX = 235;
+    _canvas.setTextColor(COLOR_STATE_COMPLETED, COLOR_BG);
+    _canvas.drawString(todayStr, todayX, 136);
+
     _canvas.drawFastHLine(12, 157, 296, COLOR_BORDER);
 }
 

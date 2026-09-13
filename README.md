@@ -1,6 +1,10 @@
 # Workbuddy 桌面硬件状态机 (ESP32-S3 Desktop HUD)
 
 <p align="center">
+  <img src="https://img.shields.io/badge/version-v1.0.0-00E5FF.svg" alt="Version">
+  <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License">
+  <img src="https://img.shields.io/badge/ESP32--S3-N16R8-orange.svg" alt="Hardware">
+  <br>
   <b>基于立创·实战派 ESP32-S3 开发板的 AI 桌面物理状态指示器与中继系统</b>
 </p>
 
@@ -20,7 +24,7 @@
    - 🔵 `RUNNING`（运行中）：动态焦点，实时展示当前执行步骤、运行耗时与工具调用计数。
    - 🟣 `NEED_ANSWER`（需回答）：紫色高亮，提取提问的核心问题摘要。
    - 🟠 `NEED_APPROVAL`（需确认）：琥珀色高亮，提示危险操作，等待物理/软件审批。
-   - 🟢 `COMPLETED`（已完成）：绿色常亮，展示任务总用时与完成步骤。
+   - 🟢 `COMPLETED`（已完成）：绿色常亮，展示任务总用时、Token 消耗与完成步骤。
    - 🔴 `ERROR`（异常报错）：红色警报，快速定位阻断原因。
    - ⚪ `IDLE`（待机就绪）：低功耗静默待机。
 
@@ -34,6 +38,7 @@
    - **自动感知中继 (Auto-Sensor Live Engine)**：后台常驻守护进程，自动监听工作区会话数据库与 Traces，无需手动打桩即可同步任务动态。
    - **Web 数据看板**：提供 `http://127.0.0.1:5200/bridge` 数据聚合看板与 `/monitor` 网页 HUD 映射。
    - **完成 Token 凭据**：任务完成后按 `sessionId` 匹配真实 Trace，在 HUB 展示本轮总 Token 及输入、输出、缓存命中与模型调用数。
+   - **今日 Token 汇总**：聚合当日所有绑定会话的 Agent Trace，独立显示所有会话 Token 总消耗，并排除标题生成等无会话 Trace。
 
 ---
 
@@ -180,6 +185,8 @@ pip install -r host_bridge/requirements.txt
 - **Web HUD 实时映射**：`http://127.0.0.1:5200/monitor`
 - **实时状态 API**：`http://127.0.0.1:5200/api/status`
 - **聚合数据 API**：`http://127.0.0.1:5200/api/bridge`
+
+> 开发时也可以直接打开 `bridge_dashboard.html`。页面在 `file://` 模式下会自动连接 `http://127.0.0.1:5200/api/bridge`；正式 HTTP 入口仍使用同源 `/api/bridge`。
 
 ---
 

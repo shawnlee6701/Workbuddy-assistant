@@ -66,9 +66,10 @@ void parseIncomingJson(const String& jsonStr) {
     currentData.alertDesc   = doc["alert_desc"] | "";
     currentData.stepStr     = doc["step"] | "0/0";
     currentData.toolsStr    = doc["tools"] | "0 次";
-    currentData.durationStr = doc["duration"] | "00:00";
-    currentData.tokenStr    = doc["tokens"] | "0k";
-    currentData.modelName   = doc["model"] | "";
+    currentData.durationStr   = doc["duration"] | "00:00";
+    currentData.tokenStr      = doc["tokens"] | (doc["session_tokens"] | "0k");
+    currentData.todayTokenStr = doc["today_tokens"] | "";
+    currentData.modelName     = doc["model"] | "";
 
     currentData.timeline.clear();
     JsonArray tl = doc["timeline"].as<JsonArray>();
@@ -90,9 +91,10 @@ void parseIncomingJson(const String& jsonStr) {
     
     if (displayReady) {
         hud.update(currentData);
-        Serial.printf("[HUD] OK -> %s | %s | model=%s | %s\n",
+        Serial.printf("[HUD] OK -> %s | %s | model=%s | token=%s | %s\n",
                       currentData.timeStr.c_str(), stateStr.c_str(),
                       currentData.modelName.isEmpty() ? "-" : currentData.modelName.c_str(),
+                      currentData.tokenStr.c_str(),
                       currentData.alertTitle.c_str());
     } else {
         Serial.println("[HUD] ERROR: display unavailable");

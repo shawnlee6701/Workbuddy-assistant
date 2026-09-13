@@ -214,6 +214,13 @@ def get_trace_summary():
     tool_total = 0
     generation_total = 0
     error_total = 0
+    token_total = 0
+    input_total = 0
+    output_total = 0
+    cached_total = 0
+    model_call_total = 0
+    token_trace_count = 0
+    token_session_ids = set()
 
     try:
         paths = glob.glob(os.path.join(SYSTEM_TRACES, "*", "*.json"))
@@ -224,7 +231,8 @@ def get_trace_summary():
     for path in paths:
         try:
             with open(path, "r", encoding="utf-8") as trace_file:
-                spans = json.load(trace_file).get("spans", [])
+                payload = json.load(trace_file)
+            spans = payload.get("spans", [])
             for span in spans:
                 span_type = span.get("type")
                 if span_type == "function":
@@ -235,6 +243,19 @@ def get_trace_summary():
                     generation_total += 1
                 if span.get("error") or str(span.get("status", "")).lower() in {"error", "failed"}:
                     error_total += 1
+
+            # 只统计绑定了真实会话的 Agent Trace；排除标题生成等系统 Trace。
+            trace = payload.get("trace") if isinstance(payload, dict) else None
+            session_id = trace.get("sessionId") if isinstance(trace, dict) else None
+            usage = parse_trace_usage(payload) if session_id else None
+            if usage:
+                token_total += usage["total"]
+                input_total += usage["input"]
+                output_total += usage["output"]
+                cached_total += usage["cached"]
+                model_call_total += usage["calls"]
+                token_trace_count += 1
+                token_session_ids.add(session_id)
         except (OSError, ValueError, AttributeError):
             continue
 
@@ -250,6 +271,20 @@ def get_trace_summary():
         result["generations"] = generation_total
     if error_total:
         result["errors"] = error_total
+    if token_total:
+        result["token_usage"] = {
+            "total": token_total,
+            "total_label": compact_number(token_total),
+            "input": input_total,
+            "input_label": compact_number(input_total),
+            "output": output_total,
+            "output_label": compact_number(output_total),
+            "cached": cached_total,
+            "cached_label": compact_number(cached_total),
+            "calls": model_call_total,
+            "traces": token_trace_count,
+            "sessions": len(token_session_ids),
+        }
     return result
 
 
@@ -279,6 +314,9 @@ def get_dashboard_data(force=False):
         today["trace_errors"] = trace_summary["errors"]
     if trace_summary.get("tools"):
         result["tools"] = trace_summary["tools"]
+    if trace_summary.get("token_usage"):
+        result["today_token_usage"] = trace_summary["token_usage"]
+        today["tokens"] = trace_summary["token_usage"]["total"]
 
     if os.path.exists(SYSTEM_DB):
         try:
@@ -619,16 +657,28 @@ def sync_status():
         usage = None
         if sys_state.get("session_status") == "completed":
             usage = get_session_trace_usage(sess_id)
-        previous_total = (current_status.get("token_usage") or {}).get("total")
-        next_total = usage.get("total") if usage else None
+        
+        # 提取本轮会话 Token 与今日总 Token
+        today_summary = get_trace_summary()
+        today_token_usage = today_summary.get("token_usage")
+        session_usage = get_session_trace_usage(sess_id) if sess_id else None
+
+        today_token_label = today_token_usage["total_label"] if today_token_usage else "0m"
+        session_token_label = session_usage["total_label"] if session_usage else "0"
+
+        previous_session_total = (current_status.get("session_token_usage") or {}).get("total")
+        next_session_total = session_usage.get("total") if session_usage else None
+        previous_today_total = (current_status.get("today_token_usage") or {}).get("total")
+        next_today_total = today_token_usage.get("total") if today_token_usage else None
 
         if (current_status.get("state") != new_state or 
             current_status.get("alert_title") != new_title or 
             current_status.get("alert_desc") != new_desc or
             current_status.get("model") != new_model or
-            previous_total != next_total):
+            previous_session_total != next_session_total or
+            previous_today_total != next_today_total):
             changed = True
-            logging.info(f"⚡ [自动感知] [{new_state}] {new_title} ({new_desc})")
+            logging.info(f"⚡ [自动感知] [{new_state}] {new_title} ({new_desc}) | 本轮:{session_token_label} 今日:{today_token_label}")
 
         current_status["state"] = new_state
         current_status["thread"] = "Workbuddy · 实时监控"
@@ -640,15 +690,26 @@ def sync_status():
             current_status["model"] = new_model
         else:
             current_status.pop("model", None)
-        if usage:
-            current_status["tokens"] = usage["total_label"]
-            current_status["token_usage"] = {
-                key: value for key, value in usage.items()
+
+        # 固化双 Token 协议
+        current_status["tokens"] = session_token_label
+        current_status["session_tokens"] = session_token_label
+        current_status["today_tokens"] = today_token_label
+
+        if session_usage:
+            current_status["session_token_usage"] = {
+                key: value for key, value in session_usage.items()
                 if key not in {"trace_id", "ended_at"}
             }
-        elif sys_state.get("session_status") != "completed":
-            current_status["tokens"] = "0"
+            current_status["token_usage"] = current_status["session_token_usage"]
+        else:
+            current_status.pop("session_token_usage", None)
             current_status.pop("token_usage", None)
+
+        if today_token_usage:
+            current_status["today_token_usage"] = today_token_usage
+        else:
+            current_status.pop("today_token_usage", None)
         current_status["timeline"] = [
             {"text": new_title, "dur": new_desc, "done": new_state == "COMPLETED", "active": new_state == "RUNNING"}
         ]

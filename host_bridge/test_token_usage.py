@@ -83,6 +83,61 @@ class TraceUsageTests(unittest.TestCase):
 
         self.assertEqual(usage["total"], 9876)
 
+    def test_today_summary_aggregates_session_traces_only(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            trace_dir = os.path.join(temp_dir, "worker")
+            os.makedirs(trace_dir)
+            payloads = [
+                {
+                    "trace": {
+                        "sessionId": "session-a",
+                        "totalTokens": 120,
+                        "modelInfo": {
+                            "totalInputTokens": 100,
+                            "totalOutputTokens": 20,
+                            "totalCachedTokens": 50,
+                            "callCount": 2,
+                        },
+                    },
+                    "spans": [],
+                },
+                {
+                    "trace": {
+                        "sessionId": "session-b",
+                        "totalTokens": 230,
+                        "modelInfo": {
+                            "totalInputTokens": 200,
+                            "totalOutputTokens": 30,
+                            "totalCachedTokens": 80,
+                            "callCount": 3,
+                        },
+                    },
+                    "spans": [],
+                },
+                {
+                    "trace": {
+                        "totalTokens": 999999,
+                        "modelInfo": {"totalInputTokens": 999999},
+                    },
+                    "spans": [],
+                },
+            ]
+            for index, payload in enumerate(payloads):
+                path = os.path.join(trace_dir, f"trace-{index}.json")
+                with open(path, "w", encoding="utf-8") as handle:
+                    json.dump(payload, handle)
+
+            with mock.patch.object(daemon, "SYSTEM_TRACES", temp_dir):
+                summary = daemon.get_trace_summary()
+
+        self.assertEqual(summary["token_usage"]["total"], 350)
+        self.assertEqual(summary["token_usage"]["input"], 300)
+        self.assertEqual(summary["token_usage"]["output"], 50)
+        self.assertEqual(summary["token_usage"]["cached"], 130)
+        self.assertEqual(summary["token_usage"]["calls"], 5)
+        self.assertEqual(summary["token_usage"]["sessions"], 2)
+        self.assertEqual(summary["token_usage"]["traces"], 2)
+
 
 if __name__ == "__main__":
     unittest.main()

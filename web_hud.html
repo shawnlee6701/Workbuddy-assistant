@@ -292,7 +292,8 @@
       <div class="hud-metrics" data-page-node-id="E32Iuupvquq31FnSldArNG">
         <div class="metric-state" id="screen-metric-state" data-page-node-id="oTBxNvd7OsaFtrdEC2mOyn">待命中</div>
         <div class="metric-duration" id="screen-metric-duration" data-page-node-id="RwYG5Z7aQBeBotRtO3NZs7">用时 00:00</div>
-        <div class="metric-sync" id="screen-metric-sync" data-page-node-id="OU4SXjVBvtNbVLbrpR0HtK">同步 实时</div>
+        <div class="metric-session-token" id="screen-metric-session-token" style="color: #00f2fe; font-family: ui-monospace, monospace;">本轮 0</div>
+        <div class="metric-today-token" id="screen-metric-today-token" style="color: #00e676; font-family: ui-monospace, monospace;">今日 0m</div>
       </div>
       <div class="hud-divider" style="margin: 12px 0 14px 0;" data-page-node-id="uaeeNoFKxNqSAzkNQ0BGw9"></div>
 
@@ -372,7 +373,12 @@
       document.getElementById('screen-desc').textContent = data.alert_desc || '正在监听系统工作流...';
       document.getElementById('screen-task-title').textContent = data.alert_title || '工作台就绪';
       document.getElementById('screen-metric-duration').textContent = '用时 ' + (data.duration || '00:00');
-      document.getElementById('screen-metric-sync').textContent = '同步 ' + (data.step || '实时');
+      
+      const sToken = String(data.session_tokens || data.tokens || '0').trim();
+      const tToken = String(data.today_tokens || '0m').trim();
+      document.getElementById('screen-metric-session-token').textContent = '本轮 ' + (sToken || '0');
+      document.getElementById('screen-metric-today-token').textContent = '今日 ' + (tToken || '0m');
+
       const model = String(data.model || '').trim();
       const modelEl = document.getElementById('screen-model');
       modelEl.textContent = model ? `· ${model}` : '';
