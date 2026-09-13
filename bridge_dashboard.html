@@ -1,0 +1,733 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Workbuddy Bridge · 工作台数据桥</title>
+  <style>
+    :root {
+      --ink: #eef5f2;
+      --muted: #83918d;
+      --faint: #52605c;
+      --base: #08100e;
+      --panel: #101a17;
+      --panel-2: #14211d;
+      --line: rgba(195, 229, 216, .12);
+      --mint: #5ff2ba;
+      --cyan: #59dcec;
+      --amber: #ffbd66;
+      --red: #ff6b67;
+      --violet: #ac8cff;
+      --shadow: 0 30px 80px rgba(0, 0, 0, .24);
+      --radius: 22px;
+    }
+
+    * { box-sizing: border-box; }
+    html { background: var(--base); }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: "Avenir Next", Avenir, "PingFang SC", "Hiragino Sans GB", sans-serif;
+      background:
+        radial-gradient(circle at 14% -12%, rgba(95, 242, 186, .13), transparent 31rem),
+        radial-gradient(circle at 94% 6%, rgba(89, 220, 236, .1), transparent 28rem),
+        linear-gradient(180deg, #0a1311 0%, #08100e 56%, #070d0c 100%);
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .23;
+      background-image:
+        linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: linear-gradient(to bottom, black, transparent 70%);
+    }
+
+    button, a { font: inherit; }
+    button { color: inherit; }
+    [hidden] { display: none !important; }
+
+    .shell {
+      position: relative;
+      width: min(1480px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 26px 0 56px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding-bottom: 26px;
+    }
+
+    .brand, .live-pill, .top-actions, .eyebrow, .panel-title, .status-chip,
+    .session-meta, .workspace-time, .automation-meta {
+      display: flex;
+      align-items: center;
+    }
+
+    .brand { gap: 13px; }
+    .mark {
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      color: var(--mint);
+      border: 1px solid rgba(95, 242, 186, .38);
+      border-radius: 12px;
+      background: rgba(95, 242, 186, .08);
+      box-shadow: inset 0 0 24px rgba(95, 242, 186, .05);
+    }
+    .brand-name {
+      font-family: "DIN Condensed", "Avenir Next Condensed", sans-serif;
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: .13em;
+    }
+    .brand-sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+    .top-actions { gap: 10px; }
+    .clock {
+      min-width: 88px;
+      color: #b7c5c0;
+      font: 600 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: .06em;
+      text-align: right;
+    }
+    .live-pill {
+      gap: 8px;
+      padding: 9px 13px;
+      color: #b8cac4;
+      font-size: 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(16, 26, 23, .72);
+      backdrop-filter: blur(12px);
+    }
+    .live-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--mint);
+      box-shadow: 0 0 0 4px rgba(95, 242, 186, .1), 0 0 14px var(--mint);
+    }
+    .live-pill.is-offline { color: #ffc0bc; border-color: rgba(255,107,103,.24); }
+    .live-pill.is-offline .live-dot { background: var(--red); box-shadow: 0 0 12px var(--red); }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(420px, .85fr);
+      min-height: 430px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 30px;
+      background: linear-gradient(135deg, rgba(18, 31, 27, .94), rgba(10, 18, 16, .96));
+      box-shadow: var(--shadow);
+      animation: reveal .65s ease both;
+    }
+
+    .hero-copy {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: clamp(34px, 5vw, 72px);
+      border-right: 1px solid var(--line);
+    }
+    .hero-copy::after {
+      content: "";
+      position: absolute;
+      right: -90px;
+      bottom: -155px;
+      width: 360px;
+      height: 360px;
+      border: 1px solid rgba(95,242,186,.12);
+      border-radius: 50%;
+      box-shadow: 0 0 0 42px rgba(95,242,186,.022), 0 0 0 84px rgba(95,242,186,.016);
+      pointer-events: none;
+    }
+    .eyebrow {
+      gap: 10px;
+      color: var(--mint);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+    .eyebrow::before { content: ""; width: 24px; height: 1px; background: currentColor; }
+    h1 {
+      max-width: 720px;
+      margin: 24px 0 20px;
+      font-family: "Songti SC", STSong, Georgia, serif;
+      font-size: clamp(42px, 5vw, 76px);
+      font-weight: 600;
+      line-height: 1.05;
+      letter-spacing: -.05em;
+    }
+    h1 span { color: var(--mint); }
+    .hero-desc {
+      max-width: 610px;
+      margin: 0;
+      color: #9caaa5;
+      font-size: 15px;
+      line-height: 1.75;
+    }
+    .hero-live {
+      position: relative;
+      z-index: 1;
+      margin-top: 38px;
+      padding-left: 17px;
+      border-left: 2px solid var(--state-color, var(--mint));
+    }
+    .hero-live-label { color: var(--muted); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
+    .hero-live-title { max-width: 660px; margin-top: 7px; font-size: 18px; font-weight: 700; line-height: 1.35; }
+    .hero-live-desc { margin-top: 6px; color: #7f8e89; font-size: 13px; }
+    .hero-live-model {
+      display: inline-flex;
+      width: fit-content;
+      margin-top: 12px;
+      padding: 5px 8px;
+      color: var(--cyan);
+      font: 700 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: .06em;
+      border: 1px solid rgba(89,220,236,.18);
+      border-radius: 6px;
+      background: rgba(89,220,236,.055);
+    }
+
+    .monitor-wrap {
+      display: grid;
+      place-items: center;
+      padding: 42px;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,.018), transparent 50%),
+        radial-gradient(circle at center, rgba(95,242,186,.06), transparent 65%);
+    }
+    .device {
+      width: min(100%, 490px);
+      padding: 18px;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 27px;
+      background: #181e1d;
+      box-shadow: 0 24px 50px rgba(0,0,0,.4), inset 0 1px rgba(255,255,255,.07);
+      transform: rotate(.5deg);
+    }
+    .device-head, .monitor-head, .monitor-metrics, .monitor-foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .device-head {
+      padding: 0 5px 12px;
+      color: #7e8a87;
+      font: 700 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: .1em;
+    }
+    .screw { width: 5px; height: 5px; border-radius: 50%; background: #333d3a; box-shadow: inset 0 1px 2px #080b0a; }
+    .monitor {
+      aspect-ratio: 4 / 3;
+      padding: 21px 23px;
+      overflow: hidden;
+      border: 2px solid #050807;
+      border-radius: 13px;
+      background: #010504;
+      box-shadow: inset 0 0 30px rgba(0,0,0,.9), 0 0 0 1px #2c3532;
+    }
+    .monitor-head { font: 700 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .monitor-logo { letter-spacing: .08em; }
+    .monitor-model {
+      max-width: 48%;
+      margin: 0 auto;
+      overflow: hidden;
+      color: var(--cyan);
+      font-size: 9px;
+      font-weight: 650;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .monitor-clock { color: #d5dfdc; }
+    .monitor-clock::after { content: ""; display: inline-block; width: 6px; height: 6px; margin-left: 7px; border-radius: 50%; background: var(--state-color, var(--mint)); box-shadow: 0 0 10px var(--state-color, var(--mint)); }
+    .monitor-state {
+      margin-top: 32px;
+      padding-left: 12px;
+      border-left: 4px solid var(--state-color, var(--mint));
+      font-family: "Songti SC", STSong, serif;
+      font-size: clamp(24px, 3.2vw, 36px);
+      font-weight: 700;
+      line-height: 1;
+    }
+    .monitor-desc {
+      margin-top: 17px;
+      min-height: 38px;
+      color: #8c9a96;
+      font-size: 11px;
+      line-height: 1.55;
+      display: -webkit-box;
+      overflow: hidden;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+    }
+    .monitor-rule { height: 1px; margin: 16px 0 12px; background: #1e2926; }
+    .monitor-metrics { color: #66736f; font: 700 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .monitor-metrics strong { color: var(--state-color, var(--mint)); }
+    .monitor-task-label { margin-top: 15px; color: #52605c; font-size: 9px; letter-spacing: .1em; }
+    .monitor-task { margin-top: 5px; overflow: hidden; color: #dce6e3; font-size: 11px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+    .monitor-foot { margin-top: 15px; color: #596662; font: 600 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .monitor-foot span:last-child { color: var(--state-color, var(--mint)); }
+
+    .content { margin-top: 18px; }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .metric-card {
+      position: relative;
+      min-height: 136px;
+      padding: 21px 22px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(16, 26, 23, .78);
+      animation: reveal .5s ease both;
+    }
+    .metric-card::after {
+      content: "";
+      position: absolute;
+      right: -18px;
+      bottom: -22px;
+      width: 72px;
+      height: 72px;
+      border: 1px solid color-mix(in srgb, var(--metric-color, var(--mint)) 25%, transparent);
+      border-radius: 50%;
+    }
+    .metric-label { color: var(--muted); font-size: 12px; }
+    .metric-value { margin-top: 15px; font: 700 34px/1 "DIN Condensed", "Avenir Next Condensed", sans-serif; letter-spacing: -.025em; }
+    .metric-note { margin-top: 9px; color: var(--faint); font-size: 11px; }
+    .metric-mark { position: absolute; top: 22px; right: 22px; color: var(--metric-color, var(--mint)); font-size: 13px; }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.45fr) minmax(340px, .75fr);
+      gap: 18px;
+      align-items: start;
+    }
+    .stack { display: grid; gap: 18px; }
+    .panel {
+      padding: 25px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(16, 26, 23, .75);
+      box-shadow: 0 16px 45px rgba(0,0,0,.11);
+      animation: reveal .55s ease both;
+    }
+    .panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 23px; }
+    .panel-title { gap: 10px; font-size: 15px; font-weight: 750; }
+    .panel-title::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--panel-color, var(--mint)); box-shadow: 0 0 10px var(--panel-color, var(--mint)); }
+    .panel-note { margin-top: 5px; color: var(--faint); font-size: 11px; }
+    .panel-count { color: var(--faint); font: 600 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .08em; }
+
+    .session-list { display: grid; }
+    .session {
+      display: grid;
+      grid-template-columns: 9px minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+      padding: 15px 0;
+      border-top: 1px solid rgba(195,229,216,.08);
+    }
+    .session:first-child { padding-top: 0; border-top: 0; }
+    .session:last-child { padding-bottom: 0; }
+    .session-dot { width: 7px; height: 7px; border: 1px solid currentColor; border-radius: 50%; color: var(--status-color, var(--muted)); box-shadow: 0 0 8px color-mix(in srgb, currentColor 55%, transparent); }
+    .session-title { overflow: hidden; font-size: 13px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+    .session-meta { gap: 8px; margin-top: 6px; color: var(--faint); font-size: 10px; }
+    .session-model { padding: 3px 6px; border-radius: 5px; background: rgba(255,255,255,.035); }
+    .session-side { color: #6d7b77; font: 600 10px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace; text-align: right; }
+
+    .bar-list { display: grid; gap: 17px; }
+    .bar-row { display: grid; gap: 8px; }
+    .bar-label { display: flex; justify-content: space-between; gap: 16px; color: #b8c5c1; font-size: 11px; }
+    .bar-label span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bar-label b { color: var(--muted); font: 600 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .bar-track { height: 5px; overflow: hidden; border-radius: 999px; background: rgba(255,255,255,.055); }
+    .bar-fill { height: 100%; width: var(--width); border-radius: inherit; background: linear-gradient(90deg, var(--panel-color, var(--mint)), color-mix(in srgb, var(--panel-color, var(--mint)) 60%, white)); transform-origin: left; animation: grow .8s .15s ease both; }
+
+    .activity-chart {
+      display: grid;
+      grid-template-columns: repeat(var(--columns), minmax(28px, 1fr));
+      align-items: end;
+      gap: 9px;
+      height: 154px;
+      padding-top: 14px;
+      border-bottom: 1px solid rgba(195,229,216,.1);
+      background: repeating-linear-gradient(to bottom, rgba(255,255,255,.035), rgba(255,255,255,.035) 1px, transparent 1px, transparent 38px);
+    }
+    .activity-col { display: grid; grid-template-rows: 1fr 18px; align-items: end; height: 100%; gap: 8px; }
+    .activity-bar { position: relative; min-height: 5px; height: var(--height); border-radius: 7px 7px 2px 2px; background: linear-gradient(to top, rgba(89,220,236,.18), var(--cyan)); box-shadow: 0 -5px 18px rgba(89,220,236,.11); animation: growY .75s ease both; }
+    .activity-bar b { position: absolute; top: -19px; left: 50%; color: #b8c8c4; font: 600 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; transform: translateX(-50%); }
+    .activity-day { overflow: hidden; color: var(--faint); font: 600 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; text-align: center; white-space: nowrap; }
+
+    .context-gauge { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 22px; align-items: center; }
+    .gauge {
+      --percent: 0;
+      position: relative;
+      display: grid;
+      place-items: center;
+      width: 112px;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: conic-gradient(var(--violet) calc(var(--percent) * 1%), rgba(255,255,255,.055) 0);
+    }
+    .gauge::before { content: ""; width: 86px; aspect-ratio: 1; border-radius: 50%; background: var(--panel); box-shadow: inset 0 0 20px rgba(0,0,0,.25); }
+    .gauge-value { position: absolute; font: 700 25px/1 "DIN Condensed", sans-serif; }
+    .context-copy strong { display: block; color: #d7e2df; font-size: 14px; }
+    .context-copy p { display: -webkit-box; margin: 8px 0 0; overflow: hidden; color: var(--muted); font-size: 11px; line-height: 1.6; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+    .context-numbers { margin-top: 13px; color: #7f8d89; font: 600 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+    .workspace-list, .automation-list { display: grid; gap: 9px; }
+    .workspace, .automation {
+      padding: 13px 14px;
+      border: 1px solid rgba(195,229,216,.075);
+      border-radius: 12px;
+      background: rgba(255,255,255,.018);
+    }
+    .workspace { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .workspace-name { overflow: hidden; color: #bac7c3; font-size: 12px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+    .workspace-time { flex: 0 0 auto; gap: 5px; color: var(--faint); font-size: 9px; }
+    .automation-name { color: #c3cfcb; font-size: 12px; font-weight: 650; }
+    .automation-meta { justify-content: space-between; gap: 10px; margin-top: 8px; color: var(--faint); font-size: 9px; }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 22px 4px 0;
+      color: #46534f;
+      font: 600 9px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+    }
+
+    @keyframes reveal { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+    @keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+    @keyframes growY { from { transform: scaleY(0); transform-origin: bottom; } to { transform: scaleY(1); transform-origin: bottom; } }
+
+    @media (max-width: 1050px) {
+      .hero { grid-template-columns: 1fr; }
+      .hero-copy { min-height: 390px; border-right: 0; border-bottom: 1px solid var(--line); }
+      .monitor-wrap { min-height: 480px; }
+      .dashboard-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 640px) {
+      .shell { width: min(100% - 22px, 1480px); padding-top: 16px; }
+      .brand-sub, .clock { display: none; }
+      .topbar { padding-bottom: 16px; }
+      .hero { border-radius: 22px; }
+      .hero-copy { min-height: 360px; padding: 30px 24px; }
+      h1 { font-size: 43px; }
+      .monitor-wrap { min-height: auto; padding: 26px 17px; }
+      .device { padding: 12px; border-radius: 20px; }
+      .monitor { padding: 16px; }
+      .monitor-state { margin-top: 23px; }
+      .monitor-desc { margin-top: 12px; min-height: 30px; }
+      .monitor-rule { margin: 11px 0 9px; }
+      .monitor-task-label { margin-top: 10px; }
+      .metrics { grid-template-columns: repeat(2, 1fr); }
+      .metric-card { min-height: 122px; padding: 18px; }
+      .panel { padding: 20px; }
+      .session { grid-template-columns: 8px minmax(0,1fr); }
+      .session-side { display: none; }
+      .context-gauge { grid-template-columns: 92px minmax(0,1fr); gap: 16px; }
+      .gauge { width: 92px; }
+      .gauge::before { width: 70px; }
+      .footer { flex-direction: column; gap: 5px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="mark" aria-hidden="true">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M4 15V9l5-3 6 3 5-3v9l-5 3-6-3-5 3V9" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M9 6v9m6-6v9" stroke="currentColor" stroke-width="1.5"/></svg>
+        </div>
+        <div>
+          <div class="brand-name">WORKBUDDY / BRIDGE</div>
+          <div class="brand-sub">本地工作台数据桥 · 只呈现已确认的数据</div>
+        </div>
+      </div>
+      <div class="top-actions">
+        <div class="clock" id="top-clock">--:--:--</div>
+        <div class="live-pill" id="connection-pill"><span class="live-dot"></span><span id="connection-text">正在连接</span></div>
+      </div>
+    </header>
+
+    <section class="hero" aria-labelledby="page-title">
+      <div class="hero-copy">
+        <div>
+          <div class="eyebrow">Local operations bridge</div>
+          <h1 id="page-title">让状态可见，<br><span>让数据有据。</span></h1>
+          <p class="hero-desc">Bridge 将开发版 Monitor 与 Workbuddy 本地运行数据汇聚到一个页面。页面不制造占位数字：数据源没有返回的内容，不会出现在这里。</p>
+        </div>
+        <div class="hero-live" id="hero-live">
+          <div class="hero-live-label">Latest signal</div>
+          <div class="hero-live-title" id="hero-live-title">等待 Workbuddy 信号</div>
+          <div class="hero-live-desc" id="hero-live-desc">正在连接本地 Bridge…</div>
+          <div class="hero-live-model" id="hero-live-model" hidden></div>
+        </div>
+      </div>
+
+      <div class="monitor-wrap">
+        <div class="device" aria-label="当前开发版 Monitor 实时镜像">
+          <div class="device-head"><span class="screw"></span><span>DEVELOPMENT MONITOR · 320 × 240</span><span class="screw"></span></div>
+          <div class="monitor" id="monitor">
+            <div class="monitor-head"><span class="monitor-logo">workbuddy</span><span class="monitor-model" id="monitor-model" hidden></span><span class="monitor-clock" id="monitor-clock">--:--:--</span></div>
+            <div class="monitor-state" id="monitor-state">连接中</div>
+            <div class="monitor-desc" id="monitor-desc">正在读取本地实时状态总线</div>
+            <div class="monitor-rule"></div>
+            <div class="monitor-metrics"><strong id="monitor-state-small">同步中</strong><span id="monitor-duration">用时 --:--</span><span id="monitor-sync">同步 实时</span></div>
+            <div class="monitor-task-label">当前任务</div>
+            <div class="monitor-task" id="monitor-task">等待数据</div>
+            <div class="monitor-foot"><span id="monitor-progress">最新进度 · —</span><span>LIVE</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="content">
+      <section class="metrics" id="metrics" hidden aria-label="实时概览"></section>
+
+      <div class="dashboard-grid" id="dashboard-grid" hidden>
+        <div class="stack" id="main-stack">
+          <section class="panel" id="recent-panel" hidden>
+            <div class="panel-head"><div><div class="panel-title">最近会话</div><div class="panel-note">来自 Workbuddy 本地会话索引，不包含 Prompt 内容</div></div><div class="panel-count" id="recent-count"></div></div>
+            <div class="session-list" id="recent-list"></div>
+          </section>
+
+          <section class="panel" id="activity-panel" style="--panel-color: var(--cyan)" hidden>
+            <div class="panel-head"><div><div class="panel-title">会话活动</div><div class="panel-note">按最近活跃时间统计 7 日会话</div></div><div class="panel-count">LOCAL TIME</div></div>
+            <div class="activity-chart" id="activity-chart"></div>
+          </section>
+
+          <section class="panel" id="tool-panel" style="--panel-color: var(--cyan)" hidden>
+            <div class="panel-head"><div><div class="panel-title">今日工具调用</div><div class="panel-note">仅统计 trace 类型与工具名，不读取参数</div></div></div>
+            <div class="bar-list" id="tool-list"></div>
+          </section>
+
+          <section class="panel" id="automation-panel" style="--panel-color: var(--amber)" hidden>
+            <div class="panel-head"><div><div class="panel-title">自动化</div><div class="panel-note">仅显示已配置的 Workbuddy 自动化任务</div></div><div class="panel-count" id="automation-count"></div></div>
+            <div class="automation-list" id="automation-list"></div>
+          </section>
+        </div>
+
+        <aside class="stack" id="side-stack">
+          <section class="panel" id="context-panel" style="--panel-color: var(--violet)" hidden>
+            <div class="panel-head"><div><div class="panel-title">最近上下文占用</div><div class="panel-note">最新有用量记录的会话</div></div></div>
+            <div class="context-gauge"><div class="gauge" id="context-gauge"><span class="gauge-value" id="context-percent">0%</span></div><div class="context-copy"><strong id="context-title">上下文窗口</strong><p id="context-session"></p><div class="context-numbers" id="context-numbers"></div></div></div>
+          </section>
+
+          <section class="panel" id="model-panel" hidden>
+            <div class="panel-head"><div><div class="panel-title">模型使用分布</div><div class="panel-note">按历史会话数统计</div></div></div>
+            <div class="bar-list" id="model-list"></div>
+          </section>
+
+          <section class="panel" id="workspace-panel" hidden>
+            <div class="panel-head"><div><div class="panel-title">最近工作区</div><div class="panel-note">为保护本地隐私，仅显示目录名</div></div></div>
+            <div class="workspace-list" id="workspace-list"></div>
+          </section>
+        </aside>
+      </div>
+    </div>
+
+    <footer class="footer"><span>Source · ~/.workbuddy-ai/workbuddy.db + traces</span><span id="last-sync">尚未同步</span></footer>
+  </main>
+
+  <script>
+    const stateConfig = {
+      RUNNING: { label: '执行中', color: '#59dcec' },
+      COMPLETED: { label: '已完成', color: '#5ff2ba' },
+      NEED_APPROVAL: { label: '等待确认', color: '#ffbd66' },
+      NEED_ANSWER: { label: '等待回答', color: '#ac8cff' },
+      ERROR: { label: '异常中断', color: '#ff6b67' },
+      IDLE: { label: '待命中', color: '#83918d' }
+    };
+
+    const statusLabel = {
+      working: '执行中', completed: '已完成', terminated: '已终止', failed: '失败',
+      pending: '等待中', active: '已启用', paused: '已暂停'
+    };
+    const statusColor = {
+      working: '#59dcec', completed: '#5ff2ba', terminated: '#ffbd66', failed: '#ff6b67',
+      pending: '#ac8cff', active: '#5ff2ba', paused: '#83918d'
+    };
+    const metricDefinitions = {
+      sessions: { label: '今日会话', note: '今日活跃会话数', color: '#5ff2ba', mark: '↗' },
+      working: { label: '正在执行', note: '当前活跃会话', color: '#59dcec', mark: '●' },
+      completed: { label: '今日完成', note: '已完成会话', color: '#5ff2ba', mark: '✓' },
+      tool_calls: { label: '工具调用', note: '今日 trace 记录', color: '#59dcec', mark: '⌘' },
+      generations: { label: '模型调用', note: '今日 generation spans', color: '#ac8cff', mark: '✦' },
+      trace_errors: { label: 'Trace 异常', note: '今日异常 spans', color: '#ff6b67', mark: '!' },
+      terminated: { label: '已终止', note: '今日终止会话', color: '#ffbd66', mark: '■' },
+      failed: { label: '失败会话', note: '今日失败会话', color: '#ff6b67', mark: '!' }
+    };
+
+    const el = id => document.getElementById(id);
+    const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
+    const formatClock = value => value ? new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(new Date(value)) : '—';
+    const formatShortTime = value => value ? new Intl.DateTimeFormat('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(value)) : '';
+    const formatDay = value => {
+      const parts = String(value || '').split('-');
+      return parts.length === 3 ? `${Number(parts[1])}/${Number(parts[2])}` : value;
+    };
+
+    function renderLive(data) {
+      const state = String(data?.state || 'IDLE').toUpperCase();
+      const config = stateConfig[state] || stateConfig.IDLE;
+      document.documentElement.style.setProperty('--state-color', config.color);
+      el('monitor-clock').textContent = data?.time || new Date().toTimeString().slice(0, 8);
+      el('monitor-state').textContent = config.label;
+      el('monitor-state-small').textContent = config.label;
+      el('monitor-desc').textContent = data?.alert_desc || '正在监听 Workbuddy 本地状态';
+      el('monitor-duration').textContent = `用时 ${data?.duration || '00:00'}`;
+      el('monitor-sync').textContent = `同步 ${data?.step || '实时'}`;
+      el('monitor-task').textContent = data?.alert_title || '工作台就绪';
+      const progress = data?.timeline?.[0]?.dur || data?.alert_desc || '等待新的任务';
+      el('monitor-progress').textContent = `最新进度 · ${progress}`;
+      el('hero-live-title').textContent = data?.alert_title || '工作台就绪';
+      el('hero-live-desc').textContent = `${config.label} · ${data?.alert_desc || '等待新的任务'}`;
+      const model = String(data?.model || '').trim();
+      el('monitor-model').textContent = model;
+      el('monitor-model').hidden = !model;
+      el('hero-live-model').textContent = model ? `MODEL · ${model}` : '';
+      el('hero-live-model').hidden = !model;
+    }
+
+    function renderMetrics(today) {
+      const entries = Object.entries(today || {}).filter(([key, value]) => metricDefinitions[key] && Number(value) > 0);
+      if (!entries.length) return;
+      el('metrics').innerHTML = entries.map(([key, value], index) => {
+        const def = metricDefinitions[key];
+        return `<article class="metric-card" style="--metric-color:${def.color};animation-delay:${index * 45}ms"><span class="metric-mark">${def.mark}</span><div class="metric-label">${def.label}</div><div class="metric-value">${Number(value).toLocaleString('zh-CN')}</div><div class="metric-note">${def.note}</div></article>`;
+      }).join('');
+      el('metrics').hidden = false;
+    }
+
+    function renderRecent(items) {
+      if (!Array.isArray(items) || !items.length) return;
+      el('recent-count').textContent = `${items.length} ITEMS`;
+      el('recent-list').innerHTML = items.map(item => {
+        const status = String(item.status || '').toLowerCase();
+        return `<article class="session" style="--status-color:${statusColor[status] || '#83918d'}"><span class="session-dot"></span><div><div class="session-title">${escapeHtml(item.title)}</div><div class="session-meta"><span>${escapeHtml(statusLabel[status] || status)}</span>${item.model ? `<span class="session-model">${escapeHtml(item.model)}</span>` : ''}</div></div><div class="session-side">${escapeHtml(formatShortTime(item.updated_at))}${item.duration ? `<br>${escapeHtml(item.duration)}` : ''}</div></article>`;
+      }).join('');
+      el('recent-panel').hidden = false;
+    }
+
+    function renderBars(items, targetId, panelId) {
+      if (!Array.isArray(items) || !items.length) return;
+      const max = Math.max(...items.map(item => Number(item.count) || 0));
+      if (!max) return;
+      el(targetId).innerHTML = items.map(item => `<div class="bar-row"><div class="bar-label"><span>${escapeHtml(item.name)}</span><b>${Number(item.count).toLocaleString('zh-CN')}</b></div><div class="bar-track"><div class="bar-fill" style="--width:${Math.max(4, Number(item.count) / max * 100)}%"></div></div></div>`).join('');
+      el(panelId).hidden = false;
+    }
+
+    function renderActivity(items) {
+      if (!Array.isArray(items) || !items.length) return;
+      const max = Math.max(...items.map(item => Number(item.count) || 0));
+      if (!max) return;
+      const chart = el('activity-chart');
+      chart.style.setProperty('--columns', items.length);
+      chart.innerHTML = items.map(item => `<div class="activity-col"><div class="activity-bar" style="--height:${Math.max(5, Number(item.count) / max * 100)}%"><b>${Number(item.count)}</b></div><div class="activity-day">${escapeHtml(formatDay(item.day))}</div></div>`).join('');
+      el('activity-panel').hidden = false;
+    }
+
+    function renderContext(item) {
+      if (!item || !(Number(item.size) > 0) || !(Number(item.used) > 0)) return;
+      const percent = Math.max(0, Math.min(100, Number(item.percent) || 0));
+      el('context-gauge').style.setProperty('--percent', percent);
+      el('context-percent').textContent = `${percent}%`;
+      el('context-session').textContent = item.session || '最近会话';
+      el('context-numbers').textContent = `${item.used_label || item.used} / ${item.size_label || item.size}`;
+      el('context-panel').hidden = false;
+    }
+
+    function renderWorkspaces(items) {
+      if (!Array.isArray(items) || !items.length) return;
+      el('workspace-list').innerHTML = items.map(item => `<div class="workspace"><span class="workspace-name">${escapeHtml(item.name)}</span>${item.last_opened_at ? `<span class="workspace-time">↗ ${escapeHtml(formatShortTime(item.last_opened_at))}</span>` : ''}</div>`).join('');
+      el('workspace-panel').hidden = false;
+    }
+
+    function renderAutomations(items) {
+      if (!Array.isArray(items) || !items.length) return;
+      el('automation-count').textContent = `${items.length} CONFIGURED`;
+      el('automation-list').innerHTML = items.map(item => {
+        const status = String(item.status || '').toLowerCase();
+        const timing = item.next_run_at ? `下次 ${formatShortTime(item.next_run_at)}` : item.last_run_at ? `上次 ${formatShortTime(item.last_run_at)}` : '';
+        return `<article class="automation"><div class="automation-name">${escapeHtml(item.name)}</div><div class="automation-meta"><span style="color:${statusColor[status] || '#83918d'}">${escapeHtml(statusLabel[status] || status)}</span><span>${escapeHtml(timing)}</span></div></article>`;
+      }).join('');
+      el('automation-panel').hidden = false;
+    }
+
+    function revealDashboardIfNeeded() {
+      const visiblePanels = [...document.querySelectorAll('.dashboard-grid .panel')].some(panel => !panel.hidden);
+      el('dashboard-grid').hidden = !visiblePanels;
+    }
+
+    function setConnected(connected) {
+      el('connection-pill').classList.toggle('is-offline', !connected);
+      el('connection-text').textContent = connected ? '本地数据已连接' : 'Bridge 未连接';
+    }
+
+    let lastDataSignature = '';
+    function resetDataSections() {
+      el('metrics').hidden = true;
+      for (const panel of document.querySelectorAll('.dashboard-grid .panel')) panel.hidden = true;
+    }
+
+    async function fetchDashboard() {
+      try {
+        const response = await fetch('/api/bridge', { cache: 'no-store' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        setConnected(true);
+        renderLive(data.live || {});
+        el('last-sync').textContent = `Last sync · ${formatClock(data.generated_at)}`;
+        const signature = JSON.stringify({
+          today: data.today, recent_sessions: data.recent_sessions, activity: data.activity,
+          context_usage: data.context_usage, models: data.models, tools: data.tools,
+          workspaces: data.workspaces, automations: data.automations
+        });
+        if (signature !== lastDataSignature) {
+          resetDataSections();
+          renderMetrics(data.today);
+          renderRecent(data.recent_sessions);
+          renderActivity(data.activity);
+          renderContext(data.context_usage);
+          renderBars(data.models, 'model-list', 'model-panel');
+          renderBars(data.tools, 'tool-list', 'tool-panel');
+          renderWorkspaces(data.workspaces);
+          renderAutomations(data.automations);
+          revealDashboardIfNeeded();
+          lastDataSignature = signature;
+        }
+      } catch (error) {
+        setConnected(false);
+        el('hero-live-title').textContent = '无法连接本地 Bridge';
+        el('hero-live-desc').textContent = '请确认 Workbuddy 状态机守护进程正在运行';
+      }
+    }
+
+    setInterval(() => { el('top-clock').textContent = new Date().toTimeString().slice(0, 8); }, 1000);
+    setInterval(fetchDashboard, 1500);
+    el('top-clock').textContent = new Date().toTimeString().slice(0, 8);
+    fetchDashboard();
+  </script>
+</body>
+</html>

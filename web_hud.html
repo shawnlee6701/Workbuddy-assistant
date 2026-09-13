@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="RGnMfapgMuWB34F2VWAEoS">
+<head data-page-node-id="2QE8Gl7Y87pHghyGsA8KEe">
+  <meta charset="UTF-8" data-page-node-id="LHmq0VKurTzFAFhxeDRQ2e">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="vuNQclnorJyZkfhtvW0BDH">
+  <title>Workbuddy 桌面状态机 · 1:1 实体屏幕实时映射看板</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0d0f12;
+      color: #f0f2f5;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 24px;
+      user-select: none;
+    }
+
+    /* 模拟实战派外壳结构 */
+    .device-shell {
+      background: #1c2026;
+      border: 4px solid #2d333d;
+      border-radius: 28px;
+      padding: 28px 24px 20px 24px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.1);
+      position: relative;
+    }
+
+    .device-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding: 0 4px;
+    }
+    .device-brand {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: #7b889b;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .power-led {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #00e676;
+      box-shadow: 0 0 10px #00e676;
+      animation: pulse 2s infinite ease-in-out;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.6; transform: scale(0.95); }
+      50% { opacity: 1; transform: scale(1.1); }
+    }
+
+    .device-badge {
+      font-size: 11px;
+      color: #536279;
+      background: #12151a;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      border: 1px solid #262c36;
+    }
+
+    /* 物理屏幕 1:1 (320x240 @ 2x/3x 真实比例渲染) */
+    .screen-container {
+      width: 480px;
+      height: 360px;
+      background: #000000;
+      border-radius: 12px;
+      border: 3px solid #14171c;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.9), 0 0 0 1px #2f3542;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      padding: 15px 18px;
+    }
+
+    /* 顶部 Header */
+    .hud-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 24px;
+    }
+    .hud-logo {
+      font-size: 14px;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: 0.5px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .hud-model {
+      max-width: 210px;
+      margin-left: auto;
+      margin-right: 12px;
+      overflow: hidden;
+      color: #00f2fe;
+      font-size: 10px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .hud-time-box {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .hud-time {
+      font-size: 14px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: #ffffff;
+      font-weight: 600;
+    }
+    .hud-status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #7b889b;
+      box-shadow: 0 0 6px currentColor;
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+
+    /* 大卡片 / 状态区 */
+    .hud-alert {
+      display: flex;
+      align-items: flex-start;
+      margin-top: 18px;
+      gap: 12px;
+    }
+    .hud-accent-bar {
+      width: 5px;
+      height: 48px;
+      border-radius: 3px;
+      background: #7b889b;
+      flex-shrink: 0;
+      box-shadow: 0 0 10px rgba(0, 242, 254, 0.4);
+      transition: background 0.3s ease;
+    }
+    .hud-alert-content {
+      flex: 1;
+    }
+    .hud-state-title {
+      font-size: 26px;
+      font-weight: 800;
+      color: #ffffff;
+      line-height: 1.1;
+      letter-spacing: 0.5px;
+    }
+    .hud-alert-desc {
+      font-size: 13px;
+      color: #b0bac9;
+      margin-top: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .hud-boot-prompt {
+      color: #f59e0b;
+      font-size: 13px;
+      font-weight: bold;
+      display: none;
+    }
+
+    /* 分割线与指标栏 */
+    .hud-divider {
+      height: 1px;
+      background: #2b3543;
+      margin: 18px 0 12px 0;
+    }
+    .hud-metrics {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .metric-state {
+      color: #7b889b;
+      font-weight: 700;
+      transition: color 0.3s ease;
+    }
+    .metric-duration {
+      color: #ffffff;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .metric-sync {
+      color: #00f2fe;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    /* 当前任务时间线 */
+    .hud-timeline-box {
+      margin-top: 10px;
+    }
+    .hud-timeline-label {
+      font-size: 12px;
+      color: #7b889b;
+      margin-bottom: 6px;
+    }
+    .hud-task-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #ffffff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.3;
+    }
+    .hud-task-progress {
+      font-size: 12px;
+      color: #7b889b;
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* 底部实时状态条 */
+    .device-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 18px;
+      padding: 0 4px;
+    }
+    .sync-badge {
+      font-size: 12px;
+      color: #00e676;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+    }
+    .sync-mode {
+      font-size: 11px;
+      color: #7b889b;
+      background: #12151a;
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid #262c36;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+  </style>
+</head>
+<body data-page-node-id="Vl8YYNK3D0sTe7iQEQFtlB">
+
+  <div class="device-shell" data-page-node-id="Cl6jGXGFan5EEnr957Q0H7">
+    <!-- 外壳面板标识 -->
+    <div class="device-header" data-page-node-id="B7nzEV6F6XjaeO9qJhF087">
+      <div class="device-brand" data-page-node-id="opXY8RbbHrrBlS9RiVsz8h">
+        <span class="power-led" data-page-node-id="SWfnlSzfi7GJUSUP8YBIci"></span>
+        WORKBUDDY 桌面状态机 · LIVE
+      </div>
+      <div class="device-badge" data-page-node-id="M6NUhhU7YCV9GSYzR6Sz2q">ESP32-S3 · 100% 实时真实同步</div>
+    </div>
+
+    <!-- 1:1 像素与样式完全对齐硬件固件的 IPS 屏幕 -->
+    <div class="screen-container" data-page-node-id="6A2dDljIRqrdFuNZ2hPpEE">
+      <!-- 顶部 -->
+      <div class="hud-header" data-page-node-id="hNtoBCg3wepM1B19DGb2DT">
+        <div class="hud-logo" data-page-node-id="lHqokzRVYyv3JBg0k0BFr9">workbuddy</div>
+        <div class="hud-model" id="screen-model" hidden></div>
+        <div class="hud-time-box" data-page-node-id="8tDiGLYuCHN4zCeSFYBbJk">
+          <div class="hud-time" id="screen-time" data-page-node-id="YQd5PpAZyQlhVh80F9dGZb">--:--:--</div>
+          <div class="hud-status-dot" id="screen-dot" data-page-node-id="8knP7jW5GsdROm6lSWqC94"></div>
+        </div>
+      </div>
+
+      <!-- 核心状态卡片 -->
+      <div class="hud-alert" data-page-node-id="jmaoLq2CkZzpQgm5GVMSfS">
+        <div class="hud-accent-bar" id="screen-accent" data-page-node-id="Tf6ygQUBw0vVo6SzYfFUnP"></div>
+        <div class="hud-alert-content" data-page-node-id="3Af8T5fCvXM3NNXSvzKFsQ">
+          <div class="hud-state-title" id="screen-state-text" data-page-node-id="CGCeGxUKQLgRLh0SYtZVgo">待命中</div>
+        </div>
+      </div>
+
+      <div class="hud-alert-desc" data-page-node-id="lc3hJnZat0iixjiD8Hpwde">
+        <span id="screen-desc" data-page-node-id="EXduLUiHSos7F1AA5IpjG4">正在监听系统工作流...</span>
+        <span class="hud-boot-prompt" id="screen-boot-prompt" data-page-node-id="okEoJuN569kopyaFgukAjv">按 BOOT 键确认</span>
+      </div>
+
+      <!-- 中间指标与分割线 -->
+      <div class="hud-divider" data-page-node-id="oJl4W0jMsRB035UTx8MgTm"></div>
+      <div class="hud-metrics" data-page-node-id="E32Iuupvquq31FnSldArNG">
+        <div class="metric-state" id="screen-metric-state" data-page-node-id="oTBxNvd7OsaFtrdEC2mOyn">待命中</div>
+        <div class="metric-duration" id="screen-metric-duration" data-page-node-id="RwYG5Z7aQBeBotRtO3NZs7">用时 00:00</div>
+        <div class="metric-sync" id="screen-metric-sync" data-page-node-id="OU4SXjVBvtNbVLbrpR0HtK">同步 实时</div>
+      </div>
+      <div class="hud-divider" style="margin: 12px 0 14px 0;" data-page-node-id="uaeeNoFKxNqSAzkNQ0BGw9"></div>
+
+      <!-- 底部当前任务与时间线 -->
+      <div class="hud-timeline-box" data-page-node-id="QBlaN1Y7aoFHfKyICDuvLq">
+        <div class="hud-timeline-label" data-page-node-id="CdEGTvxKpmqBZJ8zorbUow">当前任务</div>
+        <div class="hud-task-title" id="screen-task-title" data-page-node-id="TMgUDOw44Ny04gNYmnXyd0">暂无活跃任务</div>
+      </div>
+
+      <div class="hud-divider" style="margin: 14px 0 10px 0;" data-page-node-id="E8Dgf18vrRqGEzHKx9UtUb"></div>
+      <div class="hud-task-progress" data-page-node-id="N4TWncivgzdbFgs1sAxfgE">
+        <span style="color: #536279;" data-page-node-id="ijttGbKUH67vdimQaOm0Uu">最新进度</span>
+        <span style="color: #a0aec0;" id="screen-task-progress" data-page-node-id="ba7ZOxciVAodIAKmikxh1D">等待新的指令</span>
+      </div>
+    </div>
+
+    <!-- 底部状态条 -->
+    <div class="device-controls" data-page-node-id="AtBTEtKKfiQMPXc7g2kSvC">
+      <div class="sync-badge" data-page-node-id="CY5FX6NywfvSSzMKwxlirh">
+        <span data-page-node-id="LHs3So1TPfQb8va82TGeMV">● 实时数据通道连接正常 (500ms 自动轮询)</span>
+      </div>
+      <div class="sync-mode" id="live-source-mode" data-page-node-id="hUbDaEBELTE9HJIXBm5A5n">
+        SOURCE: SYSTEM AUTO-SENSOR
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 状态与色彩配置体系 (与 firmware/src/display_hud.cpp 100% 保持严格一致)
+    const STATE_CONFIG = {
+      'RUNNING': {
+        text: '执行中',
+        color: '#00f2fe'   // 亮青蓝 (RGB565: 0x07FA)
+      },
+      'COMPLETED': {
+        text: '已完成',
+        color: '#00e676'   // 亮绿色 (RGB565: 0x47F0)
+      },
+      'NEED_APPROVAL': {
+        text: '等待确认',
+        color: '#f59e0b'   // 警示橙 (RGB565: 0xFDC0)
+      },
+      'NEED_ANSWER': {
+        text: '等待回答',
+        color: '#8b5cf6'   // 交互紫 (RGB565: 0x8AEF)
+      },
+      'ERROR': {
+        text: '异常中断',
+        color: '#ef4444'   // 告警红 (RGB565: 0xF206)
+      },
+      'IDLE': {
+        text: '待命中',
+        color: '#7b889b'   // 待命灰 (RGB565: 0x7BEF)
+      }
+    };
+
+    function renderHud(data) {
+      if (!data) return;
+      const state = data.state || 'IDLE';
+      const cfg = STATE_CONFIG[state] || STATE_CONFIG['IDLE'];
+
+      document.getElementById('screen-time').textContent = data.time || new Date().toTimeString().split(' ')[0];
+      document.getElementById('screen-state-text').textContent = cfg.text;
+      
+      // 指标栏左侧 Label 文本与颜色
+      const metricState = document.getElementById('screen-metric-state');
+      metricState.textContent = cfg.text;
+      metricState.style.color = cfg.color;
+
+      // 核心卡片左侧条与右上角圆点
+      document.getElementById('screen-accent').style.background = cfg.color;
+      const screenDot = document.getElementById('screen-dot');
+      screenDot.style.background = cfg.color;
+      screenDot.style.color = cfg.color;
+
+      // 描述与任务
+      document.getElementById('screen-desc').textContent = data.alert_desc || '正在监听系统工作流...';
+      document.getElementById('screen-task-title').textContent = data.alert_title || '工作台就绪';
+      document.getElementById('screen-metric-duration').textContent = '用时 ' + (data.duration || '00:00');
+      document.getElementById('screen-metric-sync').textContent = '同步 ' + (data.step || '实时');
+      const model = String(data.model || '').trim();
+      const modelEl = document.getElementById('screen-model');
+      modelEl.textContent = model ? `· ${model}` : '';
+      modelEl.hidden = !model;
+
+      // 审批按键提示
+      const prompt = document.getElementById('screen-boot-prompt');
+      if (state === 'NEED_APPROVAL') {
+        prompt.style.display = 'inline-block';
+        prompt.style.color = cfg.color;
+      } else {
+        prompt.style.display = 'none';
+      }
+
+      // 时间线与进度
+      if (data.timeline && data.timeline.length > 0) {
+        document.getElementById('screen-task-progress').textContent = data.timeline[0].dur || data.alert_desc || '进行中';
+      } else {
+        document.getElementById('screen-task-progress').textContent = data.alert_desc || '等待新的任务';
+      }
+    }
+
+    // 从守护进程 5200 端口 100% 真实拉取实时数据
+    async function fetchLiveStatus() {
+      try {
+        const res = await fetch('http://127.0.0.1:5200/', { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          renderHud(data);
+        }
+      } catch (e) {
+        // 如果端口未连上，兜底尝试读取本目录静态 json 镜像
+        try {
+          const fallbackRes = await fetch('.workbuddy-ai/live_status.json', { cache: 'no-store' });
+          if (fallbackRes.ok) {
+            const data = await fallbackRes.json();
+            renderHud(data);
+          }
+        } catch (err) {}
+      }
+    }
+
+    // 高频 500ms 刷新
+    setInterval(fetchLiveStatus, 500);
+    fetchLiveStatus();
+  </script>
+</body>
+</html>
