@@ -44,5 +44,6 @@ firmware/.pio/
 
 # Local Runtime & Logs
 .workbuddy-ai/
+outputs/
 *.log
 *.pid

@@ -98,15 +98,38 @@
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     }
     .hud-model {
-      max-width: 210px;
+      max-width: 180px;
       margin-left: auto;
-      margin-right: 12px;
+      margin-right: 10px;
       overflow: hidden;
       color: #00f2fe;
-      font-size: 10px;
+      font-size: 11px;
+      font-weight: 700;
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
       text-overflow: ellipsis;
       white-space: nowrap;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: rgba(0, 242, 254, 0.1);
+      border: 0.5px solid rgba(0, 242, 254, 0.25);
+    }
+    .hud-net-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font: 600 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: #00e676;
+      margin-top: 4px;
+      padding-bottom: 2px;
+    }
+    .hud-net-row .rssi-tag {
+      color: #00f2fe;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .hud-net-row .ip-tag {
+      color: #7b889b;
     }
     .hud-time-box {
       display: flex;
@@ -196,14 +219,31 @@
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     }
 
-    /* 当前任务时间线 */
+    /* 当前任务时间线与翻滚轮播 */
     .hud-timeline-box {
       margin-top: 10px;
     }
     .hud-timeline-label {
       font-size: 12px;
       color: #7b889b;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .hud-task-pager {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 10px;
+      color: #00f2fe;
+      background: rgba(0, 242, 254, 0.1);
+      padding: 1px 6px;
+      border-radius: 4px;
+      border: 0.5px solid rgba(0, 242, 254, 0.2);
+    }
+    .hud-task-roll {
+      height: 24px;
+      overflow: hidden;
+      position: relative;
     }
     .hud-task-title {
       font-size: 15px;
@@ -213,6 +253,15 @@
       overflow: hidden;
       text-overflow: ellipsis;
       line-height: 1.3;
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease;
+    }
+    .hud-task-title.roll-out {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+    .hud-task-title.roll-in {
+      transform: translateY(100%);
+      opacity: 0;
     }
     .hud-task-progress {
       font-size: 12px;
@@ -273,6 +322,10 @@
           <div class="hud-status-dot" id="screen-dot" data-page-node-id="8knP7jW5GsdROm6lSWqC94"></div>
         </div>
       </div>
+      <div class="hud-net-row">
+        <span class="rssi-tag" id="screen-net-wifi">Wi-Fi: 离线</span>
+        <span class="ip-tag" id="screen-net-ip">--</span>
+      </div>
 
       <!-- 核心状态卡片 -->
       <div class="hud-alert" data-page-node-id="jmaoLq2CkZzpQgm5GVMSfS">
@@ -297,10 +350,15 @@
       </div>
       <div class="hud-divider" style="margin: 12px 0 14px 0;" data-page-node-id="uaeeNoFKxNqSAzkNQ0BGw9"></div>
 
-      <!-- 底部当前任务与时间线 -->
+      <!-- 底部当前任务与时间线 (支持多任务平滑翻滚轮播) -->
       <div class="hud-timeline-box" data-page-node-id="QBlaN1Y7aoFHfKyICDuvLq">
-        <div class="hud-timeline-label" data-page-node-id="CdEGTvxKpmqBZJ8zorbUow">当前任务</div>
-        <div class="hud-task-title" id="screen-task-title" data-page-node-id="TMgUDOw44Ny04gNYmnXyd0">暂无活跃任务</div>
+        <div class="hud-timeline-label" data-page-node-id="CdEGTvxKpmqBZJ8zorbUow">
+          <span>当前任务</span>
+          <span class="hud-task-pager" id="screen-task-pager" hidden>1/1</span>
+        </div>
+        <div class="hud-task-roll">
+          <div class="hud-task-title" id="screen-task-title" data-page-node-id="TMgUDOw44Ny04gNYmnXyd0">暂无活跃任务</div>
+        </div>
       </div>
 
       <div class="hud-divider" style="margin: 14px 0 10px 0;" data-page-node-id="E8Dgf18vrRqGEzHKx9UtUb"></div>
@@ -350,9 +408,82 @@
       }
     };
 
-    function renderHud(data) {
+    // 多任务翻滚轮播状态管理
+    let activeTasks = [];
+    let currentTaskIndex = 0;
+    let rollInterval = null;
+
+    function triggerTaskRoll() {
+      if (activeTasks.length <= 1) {
+        document.getElementById('screen-task-pager').hidden = true;
+        return;
+      }
+      const pager = document.getElementById('screen-task-pager');
+      const taskEl = document.getElementById('screen-task-title');
+      pager.hidden = false;
+
+      taskEl.classList.add('roll-out');
+      setTimeout(() => {
+        currentTaskIndex = (currentTaskIndex + 1) % activeTasks.length;
+        const current = activeTasks[currentTaskIndex];
+        taskEl.textContent = activeTasks.length > 1 ? `[${current.state}] ${current.title}` : current.title;
+        pager.textContent = `${currentTaskIndex + 1}/${activeTasks.length} ↻`;
+        taskEl.classList.remove('roll-out');
+        taskEl.classList.add('roll-in');
+        setTimeout(() => {
+          taskEl.classList.remove('roll-in');
+        }, 350);
+      }, 350);
+    }
+
+    function syncActiveTasks(liveData, recentSessions) {
+      const list = [];
+      const liveTitle = String(liveData?.alert_title || '').trim();
+      const liveState = String(liveData?.state || 'IDLE').toUpperCase();
+
+      if (liveTitle && liveTitle !== '工作台就绪' && liveTitle !== '等待数据') {
+        list.push({ title: liveTitle, state: liveState });
+      }
+
+      if (Array.isArray(recentSessions)) {
+        recentSessions.forEach(s => {
+          const st = String(s.status || '').toLowerCase();
+          const title = String(s.title || '').trim();
+          if ((st === 'working' || st === 'pending') && title && !list.some(item => item.title === title)) {
+            list.push({
+              title: title,
+              state: st === 'working' ? 'RUNNING' : 'PENDING'
+            });
+          }
+        });
+      }
+
+      activeTasks = list;
+      const pager = document.getElementById('screen-task-pager');
+      const taskEl = document.getElementById('screen-task-title');
+
+      if (activeTasks.length === 0) {
+        pager.hidden = true;
+        taskEl.textContent = liveTitle || '工作台就绪';
+        if (rollInterval) { clearInterval(rollInterval); rollInterval = null; }
+      } else if (activeTasks.length === 1) {
+        pager.hidden = true;
+        taskEl.textContent = activeTasks[0].title;
+        if (rollInterval) { clearInterval(rollInterval); rollInterval = null; }
+      } else {
+        pager.hidden = false;
+        pager.textContent = `${currentTaskIndex + 1}/${activeTasks.length} ↻`;
+        const current = activeTasks[currentTaskIndex] || activeTasks[0];
+        taskEl.textContent = `[${current.state}] ${current.title}`;
+        if (!rollInterval) {
+          rollInterval = setInterval(triggerTaskRoll, 3800);
+        }
+      }
+    }
+
+    function renderHud(data, recentSessions = []) {
       if (!data) return;
-      const state = data.state || 'IDLE';
+      const state = String(data.state || 'IDLE').toUpperCase();
       const cfg = STATE_CONFIG[state] || STATE_CONFIG['IDLE'];
 
       document.getElementById('screen-time').textContent = data.time || new Date().toTimeString().split(' ')[0];
@@ -369,9 +500,8 @@
       screenDot.style.background = cfg.color;
       screenDot.style.color = cfg.color;
 
-      // 描述与任务
+      // 描述与用时
       document.getElementById('screen-desc').textContent = data.alert_desc || '正在监听系统工作流...';
-      document.getElementById('screen-task-title').textContent = data.alert_title || '工作台就绪';
       document.getElementById('screen-metric-duration').textContent = '用时 ' + (data.duration || '00:00');
       
       const sToken = String(data.session_tokens || data.tokens || '0').trim();
@@ -379,10 +509,24 @@
       document.getElementById('screen-metric-session-token').textContent = '本轮 ' + (sToken || '0');
       document.getElementById('screen-metric-today-token').textContent = '今日 ' + (tToken || '0m');
 
+      // Wi-Fi 信号强度网络行
+      const netRssi = Number(data.network_rssi ?? data.rssi ?? 0);
+      const netStatus = data.network_status || (netRssi !== 0 ? 'Wi-Fi 在线' : 'Wi-Fi 离线');
+      const netIp = data.network_ip || data.ip || '';
+      if (netRssi !== 0) {
+        document.getElementById('screen-net-wifi').innerHTML = `Wi-Fi <span style="color:#00f2fe;">${netRssi}dBm</span>`;
+      } else {
+        document.getElementById('screen-net-wifi').textContent = netStatus;
+      }
+      document.getElementById('screen-net-ip').textContent = netIp || (netStatus === 'Wi-Fi 离线' ? 'OFFLINE' : '--');
+
       const model = String(data.model || '').trim();
       const modelEl = document.getElementById('screen-model');
-      modelEl.textContent = model ? `· ${model}` : '';
+      modelEl.textContent = model ? `✦ ${model}` : '';
       modelEl.hidden = !model;
+
+      // 多任务同步
+      syncActiveTasks(data, recentSessions);
 
       // 审批按键提示
       const prompt = document.getElementById('screen-boot-prompt');
@@ -401,24 +545,33 @@
       }
     }
 
-    // 从守护进程 5200 端口 100% 真实拉取实时数据
+    // 从守护进程 5200 端口拉取数据
     async function fetchLiveStatus() {
+      try {
+        const res = await fetch('http://127.0.0.1:5200/api/bridge', { cache: 'no-store' });
+        if (res.ok) {
+          const json = await res.json();
+          renderHud(json.live || {}, json.recent_sessions || []);
+          return;
+        }
+      } catch (e) {}
+
       try {
         const res = await fetch('http://127.0.0.1:5200/', { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           renderHud(data);
+          return;
         }
-      } catch (e) {
-        // 如果端口未连上，兜底尝试读取本目录静态 json 镜像
-        try {
-          const fallbackRes = await fetch('.workbuddy-ai/live_status.json', { cache: 'no-store' });
-          if (fallbackRes.ok) {
-            const data = await fallbackRes.json();
-            renderHud(data);
-          }
-        } catch (err) {}
-      }
+      } catch (e) {}
+
+      try {
+        const fallbackRes = await fetch('.workbuddy-ai/live_status.json', { cache: 'no-store' });
+        if (fallbackRes.ok) {
+          const data = await fallbackRes.json();
+          renderHud(data);
+        }
+      } catch (err) {}
     }
 
     // 高频 500ms 刷新

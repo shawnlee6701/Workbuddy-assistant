@@ -34,6 +34,9 @@ struct HudData {
     String tokenStr = "0k";
     String todayTokenStr = "0m";
     String modelName = "";
+    String networkStatus = "USB";
+    String networkIp = "";
+    int32_t networkRssi = 0;
     
     std::vector<TimelineItem> timeline;
 };
@@ -44,6 +47,7 @@ public:
     bool init();
     void update(const HudData& data);
     void showBootScreen();
+    void showSystemMessage(const String& title, const String& detail, uint16_t color);
     void testPanel();
 
 private:

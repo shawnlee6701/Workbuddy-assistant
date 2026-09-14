@@ -28,6 +28,14 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
 from urllib.parse import urlparse
 
+from v2_transport import (
+    ProtocolError,
+    SerialRequestTimeout,
+    SerialUnavailable,
+    V2Runtime,
+    redact_sensitive,
+)
+
 WORKSPACE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 STATUS_FILE = os.path.join(WORKSPACE_DIR, ".workbuddy-ai/live_status.json")
 LOG_FILE = os.path.join(WORKSPACE_DIR, ".workbuddy-ai/daemon.log")
@@ -76,12 +84,32 @@ manual_override_until = 0
 active_session_id = None
 task_start_time = time.time()
 ser = None
+serial_write_lock = threading.Lock()
+serial_rx_buffer = ""
 dashboard_cache = {"expires_at": 0, "value": None}
 trace_usage_cache = {
     "session_id": None,
     "checked_at": 0.0,
     "usage": None,
 }
+
+
+def serial_write(payload):
+    """Single synchronized write path shared by status and USB provisioning."""
+    if ser is None or not getattr(ser, "is_open", False):
+        raise SerialUnavailable("请先通过 USB 连接开发板")
+    with serial_write_lock:
+        ser.write(payload)
+        ser.flush()
+
+
+def handle_device_event(device_id, event):
+    """Record only redacted device events; approval remains NO-GO in V2.0."""
+    safe = redact_sensitive(event)
+    logging.info(f"[V2无线板端] device={device_id} event={safe.get('event') or safe.get('type')}")
+
+
+v2_runtime = V2Runtime(os.path.dirname(LOG_FILE), serial_write, on_event=handle_device_event)
 
 
 def compact_number(value):
@@ -301,6 +329,7 @@ def get_dashboard_data(force=False):
             "serial_port": getattr(ser, "port", None) if ser is not None and getattr(ser, "is_open", False) else None,
         },
         "live": dict(current_status),
+        "network": v2_runtime.status(),
     }
     result["bridge"] = {key: value for key, value in result["bridge"].items() if value not in (None, "")}
 
@@ -465,6 +494,8 @@ class StatusHttpHandler(BaseHTTPRequestHandler):
             return self.serve_file(MONITOR_FILE, "text/html; charset=utf-8")
         if path in {"/api/bridge", "/api/dashboard"}:
             return self.send_json(get_dashboard_data())
+        if path == "/api/wifi/status":
+            return self.send_json(v2_runtime.status())
         if path in {"/", "/api/status"}:
             return self.send_json(current_status)
         self.send_error(404)
@@ -497,10 +528,26 @@ class StatusHttpHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         global current_status, manual_override_until, task_start_time
+        path = urlparse(self.path).path.rstrip("/") or "/"
         content_length = int(self.headers.get('Content-Length', 0))
         post_data = self.rfile.read(content_length)
         try:
-            data = json.loads(post_data.decode("utf-8"))
+            data = json.loads(post_data.decode("utf-8")) if post_data else {}
+            if not isinstance(data, dict):
+                raise ProtocolError("请求必须是 JSON object")
+
+            if path == "/api/wifi/pair":
+                return self.send_json(v2_runtime.pair())
+            if path == "/api/wifi/scan":
+                return self.send_json(v2_runtime.scan_wifi())
+            if path == "/api/wifi/config":
+                logging.info("[V2配网] 收到配置请求（SSID、密码与 Host IP 均不写入日志）")
+                result = v2_runtime.configure_wifi(data)
+                logging.info("[V2配网] 设备已完成 Wi-Fi 与 Host 鉴权")
+                return self.send_json(result)
+            if path == "/api/wifi/unpair":
+                return self.send_json(v2_runtime.unpair())
+
             if isinstance(data, dict) and "state" in data:
                 now = time.time()
                 manual_override_until = now + 15.0  # 显式覆盖 15 秒
@@ -511,19 +558,23 @@ class StatusHttpHandler(BaseHTTPRequestHandler):
                 dashboard_cache["expires_at"] = 0
                 
                 # 显式推送立即推送到串口，实现零延迟即时刷屏
-                if ser is not None and getattr(ser, "is_open", False):
-                    try:
-                        immediate_payload = json.dumps(current_status, ensure_ascii=False) + "\n"
-                        ser.write(immediate_payload.encode("utf-8"))
-                        ser.flush()
-                    except Exception as se:
-                        logging.warning(f"显式推送串口写入异常: {se}")
+                v2_runtime.dispatcher.publish(current_status)
                 
                 return self.send_json({"status": "ok"})
+        except SerialUnavailable as exc:
+            return self.send_json({"status": "error", "message": str(exc)}, status=409)
+        except SerialRequestTimeout as exc:
+            return self.send_json({"status": "error", "message": str(exc)}, status=504)
+        except ProtocolError as exc:
+            if path == "/api/wifi/config":
+                logging.warning(f"[V2配网] 配置失败: {exc}")
+            return self.send_json({"status": "error", "message": str(exc)}, status=400)
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            return self.send_json({"status": "error", "message": "无效 JSON"}, status=400)
         except Exception as e:
             logging.error(f"HTTP POST 处理失败: {e}")
-        self.send_response(400)
-        self.end_headers()
+            return self.send_json({"status": "error", "message": "请求处理失败"}, status=500)
+        return self.send_json({"status": "error", "message": "无效请求"}, status=400)
 
     def do_OPTIONS(self):
         self.send_response(200)
@@ -719,19 +770,10 @@ def sync_status():
 
     return changed
 
-def main():
-    global ser, current_status
-    logging.info("🚀 Workbuddy 桌面全自动状态感知守护进程已启动")
-
-    # 启动后台 HTTP API
-    t_http = threading.Thread(target=start_http_server, daemon=True)
-    t_http.start()
-
-    sync_status()
-    last_sec = -1
-
+def serial_service_loop():
+    """Keep USB connection and response parsing independent from Trace work."""
+    global ser, current_status, serial_rx_buffer
     while True:
-        # 1. 维护串口连接
         if ser is None or not ser.is_open:
             port = find_serial()
             if port:
@@ -748,29 +790,60 @@ def main():
                     ser.setDTR(True)
                     ser.setRTS(False)
                     logging.info(f"✅ 成功连接开发板 (DTR=1, RTS=0): {port}")
+                    v2_runtime.usb.attach(port, serial_write)
+                    serial_rx_buffer = ""
                     time.sleep(0.3)
-                    # 刚连上立即推一次当前数据
-                    payload = json.dumps(current_status, ensure_ascii=False) + "\n"
-                    ser.write(payload.encode("utf-8"))
-                    ser.flush()
+                    v2_runtime.dispatcher.publish(dict(current_status))
                 except Exception as e:
                     logging.warning(f"打开串口失败: {e}")
                     ser = None
+                    v2_runtime.usb.detach()
 
-        # 2. 非阻塞读取板端回传
         try:
             if ser and ser.in_waiting:
                 raw = ser.read(ser.in_waiting).decode("utf-8", errors="ignore")
-                for line in raw.splitlines():
+                serial_rx_buffer += raw
+                while "\n" in serial_rx_buffer or "\r" in serial_rx_buffer:
+                    newline_positions = [pos for pos in (serial_rx_buffer.find("\n"), serial_rx_buffer.find("\r")) if pos >= 0]
+                    split_at = min(newline_positions)
+                    line = serial_rx_buffer[:split_at]
+                    serial_rx_buffer = serial_rx_buffer[split_at + 1:]
                     line = line.strip()
                     if line:
-                        logging.info(f"[板端] {line}")
+                        parsed = v2_runtime.usb.feed_line(line)
+                        if parsed:
+                            safe = redact_sensitive(parsed)
+                            logging.info(f"[板端] {json.dumps(safe, ensure_ascii=False)}")
+                        else:
+                            logging.info(f"[板端] {line}")
         except Exception as e:
             logging.warning(f"串口读取异常: {e}")
             ser = None
+            v2_runtime.usb.detach()
             continue
 
-        # 3. 检查系统状态与秒级心跳
+        time.sleep(0.02)
+
+
+def main():
+    global current_status
+    logging.info("🚀 Workbuddy 桌面状态机 V2.0 守护进程已启动")
+
+    # Start LAN services only; Dashboard remains loopback-only on port 5200.
+    v2_runtime.start()
+
+    t_http = threading.Thread(target=start_http_server, daemon=True)
+    t_http.start()
+    t_serial = threading.Thread(target=serial_service_loop, daemon=True, name="usb-serial-service")
+    t_serial.start()
+
+    sync_status()
+    last_sec = -1
+
+    while True:
+
+        # Workbuddy status/Trace aggregation may be expensive, but USB response
+        # parsing stays live in serial_service_loop.
         now_dt = datetime.now()
         status_changed = sync_status()
 
@@ -786,6 +859,8 @@ def main():
         # 触发推流条件：状态变更 OR 每秒跳动
         if status_changed or (now_dt.second != last_sec):
             last_sec = now_dt.second
+            v2_runtime.dispatcher.publish(current_status)
+            # Keep the local status file backward-compatible with V1.1 readers.
             payload = json.dumps(current_status, ensure_ascii=False) + "\n"
             
             # 单向输出本地文件供静态网页直接读取
@@ -794,15 +869,6 @@ def main():
                     f.write(payload)
             except Exception:
                 pass
-
-            # 推送到硬件串口
-            if ser is not None and getattr(ser, "is_open", False):
-                try:
-                    ser.write(payload.encode("utf-8"))
-                    ser.flush()
-                except Exception as e:
-                    logging.warning(f"串口写入异常: {e}")
-                    ser = None
 
         time.sleep(0.08)
 

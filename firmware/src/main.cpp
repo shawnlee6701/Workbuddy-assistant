@@ -3,6 +3,7 @@
 #include "bsp_board.h"
 #include "display_hud.h"
 #include "native_lcd_probe.h"
+#include "wifi_v2.h"
 
 DisplayHud hud;
 HudData currentData;
@@ -10,6 +11,69 @@ String serialBuffer = "";
 bool lastKeyState = false;
 unsigned long lastKeyDebounce = 0;
 bool displayReady = false;
+WifiV2Manager wifiManager;
+unsigned long keyPressedAt = 0;
+bool resetTriggered = false;
+
+void applyHudPayload(JsonObjectConst doc) {
+    String stateStr = doc["state"] | "IDLE";
+    if (stateStr == "RUNNING") {
+        currentData.state = STATE_RUNNING;
+        currentData.stateText = "执行中";
+    } else if (stateStr == "NEED_ANSWER") {
+        currentData.state = STATE_NEED_ANSWER;
+        currentData.stateText = "等待回答";
+    } else if (stateStr == "NEED_APPROVAL") {
+        currentData.state = STATE_NEED_APPROVAL;
+        currentData.stateText = "等待确认";
+    } else if (stateStr == "COMPLETED") {
+        currentData.state = STATE_COMPLETED;
+        currentData.stateText = "已完成";
+    } else if (stateStr == "ERROR") {
+        currentData.state = STATE_ERROR;
+        currentData.stateText = "异常中断";
+    } else {
+        currentData.state = STATE_IDLE;
+        currentData.stateText = "待命中";
+    }
+
+    currentData.threadName    = doc["thread"] | "Workbuddy 实时状态";
+    currentData.timeStr       = doc["time"] | "00:00:00";
+    currentData.alertTitle    = doc["alert_title"] | "";
+    currentData.alertDesc     = doc["alert_desc"] | "";
+    currentData.stepStr       = doc["step"] | "0/0";
+    currentData.toolsStr      = doc["tools"] | "0 次";
+    currentData.durationStr   = doc["duration"] | "00:00";
+    currentData.tokenStr      = doc["tokens"] | (doc["session_tokens"] | "0k");
+    currentData.todayTokenStr = doc["today_tokens"] | "";
+    currentData.modelName     = doc["model"] | "";
+    currentData.networkStatus = wifiManager.stateText();
+    currentData.networkIp     = wifiManager.ipText();
+    currentData.networkRssi   = wifiManager.rssi();
+
+    currentData.timeline.clear();
+    JsonArrayConst tl = doc["timeline"].as<JsonArrayConst>();
+    for (JsonObjectConst obj : tl) {
+        TimelineItem item;
+        item.text     = obj["text"].as<String>();
+        item.duration = obj["dur"].as<String>();
+        item.done     = obj["done"] | false;
+        item.active   = obj["active"] | false;
+        currentData.timeline.push_back(item);
+    }
+
+    if (!displayReady) {
+        nativeLcdProbe();
+        displayReady = hud.init();
+    }
+    if (displayReady) {
+        hud.update(currentData);
+        Serial.printf("[HUD] OK -> %s | %s | model=%s | token=%s | %s\n",
+                      currentData.timeStr.c_str(), stateStr.c_str(),
+                      currentData.modelName.isEmpty() ? "-" : currentData.modelName.c_str(),
+                      currentData.tokenStr.c_str(), currentData.alertTitle.c_str());
+    }
+}
 
 void printDiagnostics() {
     Serial.printf("[DIAG] ready=%d psram=%u heap=%u BL_GPIO42=%d\n",
@@ -39,66 +103,10 @@ void parseIncomingJson(const String& jsonStr) {
         return;
     }
 
-    String stateStr = doc["state"] | "IDLE";
-    if (stateStr == "RUNNING") {
-        currentData.state = STATE_RUNNING;
-        currentData.stateText = "执行中";
-    } else if (stateStr == "NEED_ANSWER") {
-        currentData.state = STATE_NEED_ANSWER;
-        currentData.stateText = "等待回答";
-    } else if (stateStr == "NEED_APPROVAL") {
-        currentData.state = STATE_NEED_APPROVAL;
-        currentData.stateText = "等待确认";
-    } else if (stateStr == "COMPLETED") {
-        currentData.state = STATE_COMPLETED;
-        currentData.stateText = "已完成";
-    } else if (stateStr == "ERROR") {
-        currentData.state = STATE_ERROR;
-        currentData.stateText = "异常中断";
-    } else {
-        currentData.state = STATE_IDLE;
-        currentData.stateText = "待命中";
-    }
-
-    currentData.threadName  = doc["thread"] | "Workbuddy 实时状态";
-    currentData.timeStr     = doc["time"] | "00:00:00";
-    currentData.alertTitle  = doc["alert_title"] | "";
-    currentData.alertDesc   = doc["alert_desc"] | "";
-    currentData.stepStr     = doc["step"] | "0/0";
-    currentData.toolsStr    = doc["tools"] | "0 次";
-    currentData.durationStr   = doc["duration"] | "00:00";
-    currentData.tokenStr      = doc["tokens"] | (doc["session_tokens"] | "0k");
-    currentData.todayTokenStr = doc["today_tokens"] | "";
-    currentData.modelName     = doc["model"] | "";
-
-    currentData.timeline.clear();
-    JsonArray tl = doc["timeline"].as<JsonArray>();
-    for (JsonObject obj : tl) {
-        TimelineItem item;
-        item.text     = obj["text"].as<String>();
-        item.duration = obj["dur"].as<String>();
-        item.done     = obj["done"] | false;
-        item.active   = obj["active"] | false;
-        currentData.timeline.push_back(item);
-    }
-
-    // 触发界面重绘
-    if (!displayReady) {
-        // 如果未就绪，尝试二次拉起渲染
-        nativeLcdProbe();
-        displayReady = hud.init();
-    }
-    
-    if (displayReady) {
-        hud.update(currentData);
-        Serial.printf("[HUD] OK -> %s | %s | model=%s | token=%s | %s\n",
-                      currentData.timeStr.c_str(), stateStr.c_str(),
-                      currentData.modelName.isEmpty() ? "-" : currentData.modelName.c_str(),
-                      currentData.tokenStr.c_str(),
-                      currentData.alertTitle.c_str());
-    } else {
-        Serial.println("[HUD] ERROR: display unavailable");
-    }
+    JsonObjectConst root = doc.as<JsonObjectConst>();
+    if (wifiManager.handleUsbCommand(root)) return;
+    if (wifiManager.handleSerialSnapshot(root)) return;
+    applyHudPayload(root);  // V1.1 legacy USB payload remains supported.
 }
 
 void setup() {
@@ -114,6 +122,9 @@ void setup() {
     bool panelReady = boardReady && nativeLcdProbe();
     displayReady = panelReady && hud.init();
     Serial.printf("[HUD] displayReady=%d (native panel + HUD canvas)\n", displayReady);
+
+    // 3. V2.0 Wi-Fi transport; missing credentials keeps the USB path active.
+    wifiManager.begin(applyHudPayload);
 }
 
 void loop() {
@@ -127,20 +138,44 @@ void loop() {
                 serialBuffer = "";
             }
         } else {
-            if (serialBuffer.length() > 2048) {
+            if (serialBuffer.length() >= 4096) {
                 serialBuffer = ""; // 防止异常堆积溢出
             }
             serialBuffer += c;
         }
     }
 
-    // 2. 物理按键检测与回传 (BOOT 键)
+    // 2. V2.0 network state machine.
+    wifiManager.loop();
+
+    // 3. BOOT: short approve, 1.5–10s hint, hold through 3s reset countdown.
     bool isPressed = BSPBoard::isKeyPressed();
     if (isPressed != lastKeyState && (millis() - lastKeyDebounce > 50)) {
         lastKeyDebounce = millis();
         lastKeyState = isPressed;
         if (isPressed) {
-            Serial.println("{\"event\":\"KEY_PRESS\",\"key\":\"BOOT\",\"action\":\"APPROVE\"}");
+            keyPressedAt = millis();
+            resetTriggered = false;
+        } else {
+            unsigned long held = millis() - keyPressedAt;
+            if (held < 1500 && currentData.state == STATE_NEED_APPROVAL) {
+                wifiManager.sendKeyPress();
+            }
+            if (!resetTriggered && displayReady) hud.update(currentData);
+        }
+    }
+
+    if (isPressed && !resetTriggered) {
+        unsigned long held = millis() - keyPressedAt;
+        if (held >= 13000) {
+            wifiManager.clearConfiguration();
+            resetTriggered = true;
+            if (displayReady) hud.showSystemMessage("网络配置已清除", "请连接 USB 重新配置 Wi-Fi", TFT_RED);
+        } else if (held >= 10000) {
+            int remaining = 3 - static_cast<int>((held - 10000) / 1000);
+            if (displayReady) hud.showSystemMessage("继续按住以重置", String(remaining) + " 秒后清除 Wi-Fi 与配对", TFT_RED);
+        } else if (held >= 1500) {
+            if (displayReady) hud.showSystemMessage("连接 USB 配置", "请在电脑 Dashboard 设置 Wi-Fi", TFT_CYAN);
         }
     }
 

@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="zh-CN" data-page-node-id="j6NqTuGf3K99Y89pueZ4UC">
-<head data-page-node-id="j4vOk2vYHowgxkilsTMiHG">
-  <meta charset="utf-8" data-page-node-id="lNdDBqKlNE06wxKvLpzkkM">
-  <meta name="viewport" content="width=device-width, initial-scale=1" data-page-node-id="SugdMTuISeDugili3rlB7R">
-  <meta name="color-scheme" content="dark" data-page-node-id="hlD5jl9NIMJWosZZIL8VBG">
-  <title>Workbuddy Bridge · 工作台数据桥</title>
+<html lang="zh-CN" data-page-node-id="FJraX2h3HsB8YEzELvH787">
+<head data-page-node-id="5tdJ5E7SHpXZx9E8sqjc3x">
+  <meta charset="utf-8" data-page-node-id="DrH2Zaph2vV4BuQqBgyB2M">
+  <meta name="viewport" content="width=device-width, initial-scale=1" data-page-node-id="rAYP8JzdJw3YhMa0AdjxdN">
+  <meta name="color-scheme" content="dark" data-page-node-id="p1Kue122sGUZ4avVS0HJ7E">
+  <title>Workbuddy Bridge · 开发板工作台数据桥</title>
   <style>
     :root {
       --ink: #eef5f2;
@@ -19,575 +19,865 @@
       --amber: #ffbd66;
       --red: #ff6b67;
       --violet: #ac8cff;
-      --shadow: 0 30px 80px rgba(0, 0, 0, .24);
-      --radius: 22px;
+      --radius: 16px;
     }
 
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     html { background: var(--base); }
     body {
-      margin: 0;
       min-height: 100vh;
       color: var(--ink);
-      font-family: "Avenir Next", Avenir, "PingFang SC", "Hiragino Sans GB", sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
       background:
-        radial-gradient(circle at 14% -12%, rgba(95, 242, 186, .13), transparent 31rem),
-        radial-gradient(circle at 94% 6%, rgba(89, 220, 236, .1), transparent 28rem),
-        linear-gradient(180deg, #0a1311 0%, #08100e 56%, #070d0c 100%);
+        radial-gradient(circle at 14% -12%, rgba(95, 242, 186, .09), transparent 28rem),
+        radial-gradient(circle at 94% 6%, rgba(89, 220, 236, .08), transparent 25rem),
+        linear-gradient(180deg, #0a1311 0%, #08100e 60%, #070d0c 100%);
+      padding: 20px 0 40px;
     }
 
-    body::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      opacity: .23;
-      background-image:
-        linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
-      background-size: 48px 48px;
-      mask-image: linear-gradient(to bottom, black, transparent 70%);
-    }
-
-    button, a { font: inherit; }
+    button, input, select { font: inherit; }
     button { color: inherit; }
     [hidden] { display: none !important; }
 
     .shell {
-      position: relative;
-      width: min(1480px, calc(100% - 40px));
+      width: min(1380px, calc(100% - 32px));
       margin: 0 auto;
-      padding: 26px 0 56px;
     }
 
+    /* 顶部导航与总览 */
     .topbar {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 20px;
-      padding-bottom: 26px;
+      gap: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 18px;
     }
 
-    .brand, .live-pill, .top-actions, .eyebrow, .panel-title, .status-chip,
-    .session-meta, .workspace-time, .automation-meta {
+    .brand {
       display: flex;
       align-items: center;
+      gap: 10px;
     }
-
-    .brand { gap: 13px; }
-    .mark {
+    .brand-mark {
       display: grid;
       place-items: center;
-      width: 38px;
-      height: 38px;
+      width: 32px;
+      height: 32px;
       color: var(--mint);
-      border: 1px solid rgba(95, 242, 186, .38);
-      border-radius: 12px;
+      border: 1px solid rgba(95, 242, 186, .35);
+      border-radius: 8px;
       background: rgba(95, 242, 186, .08);
-      box-shadow: inset 0 0 24px rgba(95, 242, 186, .05);
     }
     .brand-name {
-      font-family: "DIN Condensed", "Avenir Next Condensed", sans-serif;
-      font-size: 17px;
-      font-weight: 800;
-      letter-spacing: .13em;
-    }
-    .brand-sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
-    .top-actions { gap: 10px; }
-    .clock {
-      min-width: 88px;
-      color: #b7c5c0;
-      font: 600 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-      letter-spacing: .06em;
-      text-align: right;
-    }
-    .live-pill {
-      gap: 8px;
-      padding: 9px 13px;
-      color: #b8cac4;
-      font-size: 12px;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      background: rgba(16, 26, 23, .72);
-      backdrop-filter: blur(12px);
-    }
-    .live-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--mint);
-      box-shadow: 0 0 0 4px rgba(95, 242, 186, .1), 0 0 14px var(--mint);
-    }
-    .live-pill.is-offline { color: #ffc0bc; border-color: rgba(255,107,103,.24); }
-    .live-pill.is-offline .live-dot { background: var(--red); box-shadow: 0 0 12px var(--red); }
-
-    .hero {
-      display: grid;
-      grid-template-columns: minmax(0, 1.15fr) minmax(420px, .85fr);
-      min-height: 430px;
-      overflow: hidden;
-      border: 1px solid var(--line);
-      border-radius: 30px;
-      background: linear-gradient(135deg, rgba(18, 31, 27, .94), rgba(10, 18, 16, .96));
-      box-shadow: var(--shadow);
-      animation: reveal .65s ease both;
-    }
-
-    .hero-copy {
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      padding: clamp(34px, 5vw, 72px);
-      border-right: 1px solid var(--line);
-    }
-    .hero-copy::after {
-      content: "";
-      position: absolute;
-      right: -90px;
-      bottom: -155px;
-      width: 360px;
-      height: 360px;
-      border: 1px solid rgba(95,242,186,.12);
-      border-radius: 50%;
-      box-shadow: 0 0 0 42px rgba(95,242,186,.022), 0 0 0 84px rgba(95,242,186,.016);
-      pointer-events: none;
-    }
-    .eyebrow {
-      gap: 10px;
-      color: var(--mint);
-      font-size: 11px;
-      font-weight: 800;
-      letter-spacing: .18em;
-      text-transform: uppercase;
-    }
-    .eyebrow::before { content: ""; width: 24px; height: 1px; background: currentColor; }
-    h1 {
-      max-width: 720px;
-      margin: 24px 0 20px;
-      font-family: "Songti SC", STSong, Georgia, serif;
-      font-size: clamp(42px, 5vw, 76px);
-      font-weight: 600;
-      line-height: 1.05;
-      letter-spacing: -.05em;
-    }
-    h1 span { color: var(--mint); }
-    .hero-desc {
-      max-width: 610px;
-      margin: 0;
-      color: #9caaa5;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
       font-size: 15px;
-      line-height: 1.75;
+      font-weight: 700;
+      letter-spacing: .08em;
     }
-    .hero-live {
-      position: relative;
-      z-index: 1;
-      margin-top: 38px;
-      padding-left: 17px;
-      border-left: 2px solid var(--state-color, var(--mint));
-    }
-    .hero-live-label { color: var(--muted); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
-    .hero-live-title { max-width: 660px; margin-top: 7px; font-size: 18px; font-weight: 700; line-height: 1.35; }
-    .hero-live-desc { margin-top: 6px; color: #7f8e89; font-size: 13px; }
-    .hero-live-model {
-      display: inline-flex;
-      width: fit-content;
-      margin-top: 12px;
-      padding: 5px 8px;
-      color: var(--cyan);
-      font: 700 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-      letter-spacing: .06em;
-      border: 1px solid rgba(89,220,236,.18);
-      border-radius: 6px;
-      background: rgba(89,220,236,.055);
-    }
-    .token-receipt {
-      position: relative;
-      width: min(100%, 520px);
-      margin-top: 16px;
-      padding: 14px 16px 13px;
-      overflow: hidden;
-      border: 1px solid rgba(95,242,186,.2);
-      border-left: 3px solid var(--mint);
-      border-radius: 4px 13px 13px 4px;
-      background: linear-gradient(115deg, rgba(95,242,186,.075), rgba(16,26,23,.52));
-      box-shadow: inset 0 1px rgba(255,255,255,.025);
-    }
-    .token-receipt::after {
-      content: "";
-      position: absolute;
-      top: 0;
-      right: 0;
-      width: 74px;
-      height: 100%;
-      opacity: .12;
-      background: repeating-linear-gradient(125deg, transparent 0 7px, var(--mint) 7px 8px);
-      pointer-events: none;
-    }
-    .token-receipt-head, .token-breakdown { display: flex; align-items: center; }
-    .token-receipt-head { position: relative; z-index: 1; justify-content: space-between; gap: 18px; }
-    .token-receipt-label { color: #71817b; font: 750 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .13em; }
-    .token-receipt-total { color: var(--mint); font: 750 23px/1 "DIN Condensed", "Avenir Next Condensed", sans-serif; letter-spacing: .02em; }
-    .token-receipt-total small { margin-left: 5px; color: #71817b; font: 700 8px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .08em; }
-    .token-breakdown { position: relative; z-index: 1; flex-wrap: wrap; gap: 8px 18px; margin-top: 11px; }
-    .token-breakdown span { color: #71817b; font-size: 10px; }
-    .token-breakdown b { margin-left: 4px; color: #b8c8c3; font: 650 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
 
-    .monitor-wrap {
-      display: grid;
-      place-items: center;
-      padding: 42px;
-      background:
-        linear-gradient(135deg, rgba(255,255,255,.018), transparent 50%),
-        radial-gradient(circle at center, rgba(95,242,186,.06), transparent 65%);
-    }
-    .device {
-      width: min(100%, 490px);
-      padding: 18px;
-      border: 1px solid rgba(255,255,255,.1);
-      border-radius: 27px;
-      background: #181e1d;
-      box-shadow: 0 24px 50px rgba(0,0,0,.4), inset 0 1px rgba(255,255,255,.07);
-      transform: rotate(.5deg);
-    }
-    .device-head, .monitor-head, .monitor-metrics, .monitor-foot {
+    .top-center-stats {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      gap: 10px;
     }
-    .device-head {
-      padding: 0 5px 12px;
-      color: #7e8a87;
-      font: 700 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-      letter-spacing: .1em;
+    .top-token-pill, .top-model-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(16, 26, 23, .85);
+      border: 1px solid var(--line);
     }
-    .screw { width: 5px; height: 5px; border-radius: 50%; background: #333d3a; box-shadow: inset 0 1px 2px #080b0a; }
-    .monitor {
-      aspect-ratio: 4 / 3;
-      padding: 21px 23px;
-      overflow: hidden;
-      border: 2px solid #050807;
-      border-radius: 13px;
-      background: #010504;
-      box-shadow: inset 0 0 30px rgba(0,0,0,.9), 0 0 0 1px #2c3532;
+    .top-token-pill {
+      border-color: rgba(95, 242, 186, .25);
     }
-    .monitor-head { font: 700 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
-    .monitor-logo { letter-spacing: .08em; }
-    .monitor-model {
-      max-width: 48%;
-      margin: 0 auto;
-      overflow: hidden;
+    .top-model-pill {
+      border-color: rgba(89, 220, 236, .25);
+    }
+    .top-model-icon {
       color: var(--cyan);
-      font-size: 9px;
-      font-weight: 650;
+      font-size: 11px;
+    }
+    .top-model-label, .top-token-label {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .top-model-name {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--cyan);
+      max-width: 180px;
+      overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .monitor-clock { color: #d5dfdc; }
-    .monitor-clock::after { content: ""; display: inline-block; width: 6px; height: 6px; margin-left: 7px; border-radius: 50%; background: var(--state-color, var(--mint)); box-shadow: 0 0 10px var(--state-color, var(--mint)); }
-    .monitor-state {
-      margin-top: 32px;
-      padding-left: 12px;
-      border-left: 4px solid var(--state-color, var(--mint));
-      font-family: "Songti SC", STSong, serif;
-      font-size: clamp(24px, 3.2vw, 36px);
+    .top-token-total {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 14px;
       font-weight: 700;
-      line-height: 1;
+      color: var(--mint);
     }
-    .monitor-desc {
-      margin-top: 17px;
-      min-height: 38px;
-      color: #8c9a96;
-      font-size: 11px;
-      line-height: 1.55;
-      display: -webkit-box;
-      overflow: hidden;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: 2;
+    .top-token-sub {
+      font-size: 10px;
+      color: var(--faint);
     }
-    .monitor-rule { height: 1px; margin: 16px 0 12px; background: #1e2926; }
-    .monitor-metrics { gap: 8px; color: #66736f; font: 700 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
-    .monitor-metrics strong { color: var(--state-color, var(--mint)); }
-    .monitor-token { color: var(--mint); }
-    .monitor-task-label { margin-top: 15px; color: #52605c; font-size: 9px; letter-spacing: .1em; }
-    .monitor-task { margin-top: 5px; overflow: hidden; color: #dce6e3; font-size: 11px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
-    .monitor-foot { margin-top: 15px; color: #596662; font: 600 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
-    .monitor-foot span:last-child { color: var(--state-color, var(--mint)); }
 
-    .content { margin-top: 18px; }
-    .metrics {
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .live-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      color: #b8cac4;
+      font-size: 11px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(16, 26, 23, .72);
+    }
+    .live-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--mint);
+      box-shadow: 0 0 10px var(--mint);
+    }
+    .live-pill.is-offline { color: #ffc0bc; border-color: rgba(255,107,103,.24); }
+    .live-pill.is-offline .live-dot { background: var(--red); box-shadow: 0 0 10px var(--red); }
+    .clock {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+      color: #b7c5c0;
+    }
+
+    /* 首屏控制台：左 1:1 实体屏 + 右 实时增量面板 */
+    .live-console {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-      gap: 12px;
+      grid-template-columns: 360px minmax(0, 1fr);
+      gap: 16px;
       margin-bottom: 18px;
     }
-    .metric-card {
-      position: relative;
-      min-height: 136px;
-      padding: 21px 22px;
-      overflow: hidden;
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      background: rgba(16, 26, 23, .78);
-      animation: reveal .5s ease both;
-    }
-    .metric-card::after {
-      content: "";
-      position: absolute;
-      right: -18px;
-      bottom: -22px;
-      width: 72px;
-      height: 72px;
-      border: 1px solid color-mix(in srgb, var(--metric-color, var(--mint)) 25%, transparent);
-      border-radius: 50%;
-    }
-    .metric-label { color: var(--muted); font-size: 12px; }
-    .metric-value { margin-top: 15px; font: 700 34px/1 "DIN Condensed", "Avenir Next Condensed", sans-serif; letter-spacing: -.025em; }
-    .metric-note { margin-top: 9px; color: var(--faint); font-size: 11px; }
-    .metric-mark { position: absolute; top: 22px; right: 22px; color: var(--metric-color, var(--mint)); font-size: 13px; }
 
-    .dashboard-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1.45fr) minmax(340px, .75fr);
-      gap: 18px;
-      align-items: start;
+    /* 1:1 实体屏幕仿真 */
+    .device-shell {
+      padding: 14px;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 20px;
+      background: #141b19;
+      box-shadow: 0 16px 36px rgba(0,0,0,.35);
     }
-    .stack { display: grid; gap: 18px; }
-    .panel {
-      padding: 25px;
+    .device-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 8px;
+      color: #7e8a87;
+      font: 700 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: .08em;
+    }
+    .screw { width: 4px; height: 4px; border-radius: 50%; background: #2f3a37; }
+
+    .monitor {
+      height: 252px;
+      padding: 14px 16px;
+      border: 2px solid #050807;
+      border-radius: 12px;
+      background: #010504;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      box-shadow: inset 0 0 24px rgba(0,0,0,.9);
+    }
+    .monitor-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font: 700 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .monitor-net-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font: 600 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: var(--mint);
+      margin-top: 3px;
+      padding: 0 1px;
+    }
+    .monitor-net-row .rssi-tag {
+      color: var(--cyan);
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .monitor-net-row .ip-tag {
+      color: #6d7e79;
+    }
+    .monitor-logo { color: #fff; letter-spacing: .06em; }
+    .monitor-model {
+      max-width: 150px;
+      overflow: hidden;
+      color: var(--cyan);
+      font-size: 10px;
+      font-weight: 700;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: rgba(89, 220, 236, .08);
+      border: 0.5px solid rgba(89, 220, 236, .2);
+    }
+    .monitor-clock { color: #83918d; }
+
+    .monitor-state-wrap {
+      margin: 8px 0;
+      padding-left: 10px;
+      border-left: 3px solid var(--state-color, var(--mint));
+    }
+    .monitor-state {
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1.1;
+      color: #fff;
+    }
+    .monitor-desc {
+      margin-top: 4px;
+      color: #8c9a96;
+      font-size: 11px;
+      line-height: 1.4;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .monitor-metrics-bar {
+      border-top: 0.5px solid #1e2926;
+      border-bottom: 0.5px solid #1e2926;
+      padding: 5px 0;
+      display: flex;
+      justify-content: space-between;
+      font: 700 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .monitor-metrics-bar strong { color: var(--state-color, var(--mint)); }
+    .monitor-metrics-bar .dur { color: #dce6e3; }
+    .monitor-metrics-bar .s-tok { color: var(--cyan); }
+    .monitor-metrics-bar .t-tok { color: var(--mint); }
+
+    .monitor-task-area { margin-top: 6px; }
+    .monitor-task-label {
+      font-size: 9px;
+      color: #52605c;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .monitor-task-pager {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 8px;
+      color: var(--cyan);
+      background: rgba(89, 220, 236, .08);
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
+    .monitor-task-roll {
+      height: 18px;
+      overflow: hidden;
+      position: relative;
+      margin-top: 2px;
+    }
+    .monitor-task {
+      font-size: 11px;
+      font-weight: 600;
+      color: #dce6e3;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease;
+    }
+    .monitor-task.roll-out {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+    .monitor-task.roll-in {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+
+    .monitor-foot {
+      border-top: 0.5px solid #1e2926;
+      padding-top: 5px;
+      margin-top: 5px;
+      display: flex;
+      justify-content: space-between;
+      font: 600 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: #596662;
+    }
+    .monitor-foot span:last-child { color: var(--state-color, var(--mint)); }
+
+    /* 右侧增量看板 (随状态切换，无重复文本) */
+    .action-board {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 280px;
+    }
+    .action-board-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(195,229,216,.08);
+    }
+    .action-board-title {
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .action-board-title::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--state-color, var(--mint));
+    }
+    .action-board-tag {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(255,255,255,.05);
+      color: var(--muted);
+    }
+
+    /* Trace 瀑布流水 */
+    .trace-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin: 10px 0;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+    .trace-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 7px 10px;
+      background: rgba(255,255,255,.025);
+      border: 1px solid rgba(195,229,216,.06);
+      border-left: 3px solid var(--state-color, var(--mint));
+      border-radius: 6px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 11px;
+    }
+    .trace-name { color: #dce6e3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 10px; }
+    .trace-dur { color: var(--muted); flex-shrink: 0; }
+
+    /* 审批/拦截卡片 */
+    .approval-box {
+      background: rgba(255, 189, 102, .08);
+      border: 1px solid rgba(255, 189, 102, .25);
+      border-radius: 10px;
+      padding: 12px;
+      margin: 10px 0;
+    }
+    .approval-msg { font-size: 12px; color: var(--amber); margin-bottom: 8px; font-weight: 500; }
+    .approval-cmd {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 11px;
+      background: rgba(0,0,0,.3);
+      padding: 6px 8px;
+      border-radius: 6px;
+      color: #e0d0b0;
+      word-break: break-all;
+    }
+    .approval-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .btn-approve {
+      flex: 1;
+      padding: 8px;
+      background: var(--mint);
+      color: #08100e;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .btn-reject {
+      padding: 8px 16px;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    /* 完成凭据 Receipt */
+    .receipt-box {
+      background: rgba(95, 242, 186, .05);
+      border: 1px solid rgba(95, 242, 186, .2);
+      border-radius: 10px;
+      padding: 12px;
+      margin: 8px 0;
+    }
+    .receipt-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 8px;
+    }
+    .receipt-total {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--mint);
+    }
+    .receipt-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .receipt-grid b {
+      color: var(--ink);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      display: block;
+      margin-top: 2px;
+    }
+
+    /* 下半部网格 */
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+    .card {
+      background: var(--panel);
       border: 1px solid var(--line);
       border-radius: var(--radius);
-      background: rgba(16, 26, 23, .75);
-      box-shadow: 0 16px 45px rgba(0,0,0,.11);
-      animation: reveal .55s ease both;
+      padding: 16px;
     }
-    .panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 23px; }
-    .panel-title { gap: 10px; font-size: 15px; font-weight: 750; }
-    .panel-title::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--panel-color, var(--mint)); box-shadow: 0 0 10px var(--panel-color, var(--mint)); }
-    .panel-note { margin-top: 5px; color: var(--faint); font-size: 11px; }
-    .panel-count { color: var(--faint); font: 600 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .08em; }
-
-    .session-list { display: grid; }
-    .session {
-      display: grid;
-      grid-template-columns: 9px minmax(0, 1fr) auto;
-      gap: 14px;
+    .card-head {
+      display: flex;
+      justify-content: space-between;
       align-items: center;
-      padding: 15px 0;
-      border-top: 1px solid rgba(195,229,216,.08);
+      margin-bottom: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
     }
-    .session:first-child { padding-top: 0; border-top: 0; }
-    .session:last-child { padding-bottom: 0; }
-    .session-dot { width: 7px; height: 7px; border: 1px solid currentColor; border-radius: 50%; color: var(--status-color, var(--muted)); box-shadow: 0 0 8px color-mix(in srgb, currentColor 55%, transparent); }
-    .session-title { overflow: hidden; font-size: 13px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
-    .session-meta { gap: 8px; margin-top: 6px; color: var(--faint); font-size: 10px; }
-    .session-model { padding: 3px 6px; border-radius: 5px; background: rgba(255,255,255,.035); }
-    .session-side { color: #6d7b77; font: 600 10px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace; text-align: right; }
+    .card-head span:last-child {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 10px;
+    }
 
-    .bar-list { display: grid; gap: 17px; }
-    .bar-row { display: grid; gap: 8px; }
-    .bar-label { display: flex; justify-content: space-between; gap: 16px; color: #b8c5c1; font-size: 11px; }
-    .bar-label span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .bar-label b { color: var(--muted); font: 600 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
-    .bar-track { height: 5px; overflow: hidden; border-radius: 999px; background: rgba(255,255,255,.055); }
-    .bar-fill { height: 100%; width: var(--width); border-radius: inherit; background: linear-gradient(90deg, var(--panel-color, var(--mint)), color-mix(in srgb, var(--panel-color, var(--mint)) 60%, white)); transform-origin: left; animation: grow .8s .15s ease both; }
+    /* 条形进度与图表 */
+    .bar-list { display: grid; gap: 10px; }
+    .bar-row { display: grid; gap: 4px; }
+    .bar-label { display: flex; justify-content: space-between; font-size: 11px; color: #b8c5c1; }
+    .bar-label b { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); }
+    .bar-track { height: 4px; border-radius: 999px; background: rgba(255,255,255,.05); overflow: hidden; }
+    .bar-fill { height: 100%; width: var(--width); background: var(--cyan); border-radius: inherit; }
 
     .activity-chart {
       display: grid;
-      grid-template-columns: repeat(var(--columns), minmax(28px, 1fr));
+      grid-template-columns: repeat(var(--columns, 7), 1fr);
       align-items: end;
-      gap: 9px;
-      height: 154px;
-      padding-top: 14px;
-      border-bottom: 1px solid rgba(195,229,216,.1);
-      background: repeating-linear-gradient(to bottom, rgba(255,255,255,.035), rgba(255,255,255,.035) 1px, transparent 1px, transparent 38px);
+      gap: 6px;
+      height: 90px;
+      padding-top: 10px;
+      border-bottom: 1px solid var(--line);
     }
-    .activity-col { display: grid; grid-template-rows: 1fr 18px; align-items: end; height: 100%; gap: 8px; }
-    .activity-bar { position: relative; min-height: 5px; height: var(--height); border-radius: 7px 7px 2px 2px; background: linear-gradient(to top, rgba(89,220,236,.18), var(--cyan)); box-shadow: 0 -5px 18px rgba(89,220,236,.11); animation: growY .75s ease both; }
-    .activity-bar b { position: absolute; top: -19px; left: 50%; color: #b8c8c4; font: 600 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; transform: translateX(-50%); }
-    .activity-day { overflow: hidden; color: var(--faint); font: 600 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; text-align: center; white-space: nowrap; }
+    .activity-col { display: grid; grid-template-rows: 1fr 16px; align-items: end; height: 100%; gap: 4px; }
+    .activity-bar { min-height: 4px; height: var(--height); border-radius: 4px 4px 1px 1px; background: var(--cyan); }
+    .activity-day { font-size: 9px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--faint); text-align: center; }
 
-    .context-gauge { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 22px; align-items: center; }
-    .gauge {
-      --percent: 0;
-      position: relative;
+    /* 底部双栏：会话列表 + Wi-Fi 管理 */
+    .bottom-grid {
       display: grid;
-      place-items: center;
-      width: 112px;
-      aspect-ratio: 1;
-      border-radius: 50%;
-      background: conic-gradient(var(--violet) calc(var(--percent) * 1%), rgba(255,255,255,.055) 0);
+      grid-template-columns: minmax(0, 1.4fr) minmax(320px, .9fr);
+      gap: 16px;
     }
-    .gauge::before { content: ""; width: 86px; aspect-ratio: 1; border-radius: 50%; background: var(--panel); box-shadow: inset 0 0 20px rgba(0,0,0,.25); }
-    .gauge-value { position: absolute; font: 700 25px/1 "DIN Condensed", sans-serif; }
-    .context-copy strong { display: block; color: #d7e2df; font-size: 14px; }
-    .context-copy p { display: -webkit-box; margin: 8px 0 0; overflow: hidden; color: var(--muted); font-size: 11px; line-height: 1.6; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
-    .context-numbers { margin-top: 13px; color: #7f8d89; font: 600 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
 
-    .workspace-list, .automation-list { display: grid; gap: 9px; }
-    .workspace, .automation {
-      padding: 13px 14px;
-      border: 1px solid rgba(195,229,216,.075);
-      border-radius: 12px;
-      background: rgba(255,255,255,.018);
+    .session-list { display: grid; gap: 8px; max-height: 260px; overflow-y: auto; }
+    .session-item {
+      display: grid;
+      grid-template-columns: 8px minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      padding: 8px 10px;
+      background: rgba(255,255,255,.02);
+      border-radius: 8px;
+      border: 1px solid rgba(195,229,216,.05);
     }
-    .workspace { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-    .workspace-name { overflow: hidden; color: #bac7c3; font-size: 12px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
-    .workspace-time { flex: 0 0 auto; gap: 5px; color: var(--faint); font-size: 9px; }
-    .automation-name { color: #c3cfcb; font-size: 12px; font-weight: 650; }
-    .automation-meta { justify-content: space-between; gap: 10px; margin-top: 8px; color: var(--faint); font-size: 9px; }
+    .session-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--dot-color, var(--muted)); }
+    .session-title { font-size: 12px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .session-meta { font-size: 10px; color: var(--faint); margin-top: 2px; }
+    .session-time { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; color: var(--muted); text-align: right; }
+
+    /* Wi-Fi 表单 */
+    .wifi-status-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; }
+    @media (max-width: 640px) {
+      .wifi-status-row { grid-template-columns: repeat(2, 1fr); }
+    }
+    .wifi-stat-box { padding: 8px; background: rgba(255,255,255,.02); border: 1px solid var(--line); border-radius: 8px; }
+    .wifi-stat-box span { font-size: 9px; color: var(--faint); display: block; text-transform: uppercase; }
+    .wifi-stat-box strong { font-size: 11px; font-weight: 600; color: #c8d4d0; margin-top: 2px; display: flex; align-items: center; gap: 4px; }
+    .signal-bars { display: inline-flex; align-items: flex-end; gap: 1.5px; height: 11px; vertical-align: middle; }
+    .signal-bar { width: 2px; background: rgba(255,255,255,.15); border-radius: 1px; }
+    .signal-bar:nth-child(1) { height: 3px; }
+    .signal-bar:nth-child(2) { height: 5px; }
+    .signal-bar:nth-child(3) { height: 8px; }
+    .signal-bar:nth-child(4) { height: 11px; }
+    .signal-bar.active { background: var(--mint); }
+    .signal-bar.warn { background: var(--amber); }
+    .signal-bar.poor { background: var(--red); }
+
+    .wifi-form { display: grid; gap: 8px; }
+    .wifi-form input, .wifi-form select {
+      width: 100%;
+      padding: 8px 10px;
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      outline: none;
+      background: #0b1412;
+      font-size: 11px;
+    }
+    .wifi-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .wifi-btn {
+      padding: 8px;
+      border: 1px solid rgba(89,220,236,.25);
+      border-radius: 8px;
+      background: rgba(89,220,236,.08);
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .wifi-btn.primary { background: var(--mint); color: #08100e; border-color: var(--mint); font-weight: 600; }
+    .wifi-btn.secondary { background: rgba(255,255,255,.05); border-color: var(--line); color: var(--muted); }
+    .wifi-msg { font-size: 10px; color: var(--muted); min-height: 16px; line-height: 1.4; margin-top: 2px; }
+    .wifi-msg.is-error { color: var(--red); }
+    .wifi-msg.is-success { color: var(--mint); }
+
+    /* 已连接态卡片 */
+    .wifi-connected-box {
+      background: rgba(95, 242, 186, .04);
+      border: 1px solid rgba(95, 242, 186, .2);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: grid;
+      gap: 10px;
+    }
+    .wifi-connected-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .wifi-connected-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--mint);
+    }
+    .wifi-connected-badge::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--mint);
+      box-shadow: 0 0 8px var(--mint);
+    }
+    .wifi-details-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      background: rgba(0,0,0,.2);
+      border-radius: 8px;
+      padding: 8px 10px;
+      border: 1px solid rgba(255,255,255,.03);
+    }
+    .wifi-detail-item span {
+      font-size: 9px;
+      color: var(--faint);
+      display: block;
+      text-transform: uppercase;
+    }
+    .wifi-detail-item strong {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 11px;
+      font-weight: 600;
+      color: #e2ede9;
+      margin-top: 2px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      word-break: break-all;
+    }
 
     .footer {
       display: flex;
       justify-content: space-between;
-      gap: 20px;
-      padding: 22px 4px 0;
+      margin-top: 20px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+      font: 600 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
       color: #46534f;
-      font: 600 9px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
-      letter-spacing: .07em;
-      text-transform: uppercase;
+      letter-spacing: .06em;
     }
 
-    @keyframes reveal { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-    @keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-    @keyframes growY { from { transform: scaleY(0); transform-origin: bottom; } to { transform: scaleY(1); transform-origin: bottom; } }
-
-    @media (max-width: 1050px) {
-      .hero { grid-template-columns: 1fr; }
-      .hero-copy { min-height: 390px; border-right: 0; border-bottom: 1px solid var(--line); }
-      .monitor-wrap { min-height: 480px; }
-      .dashboard-grid { grid-template-columns: 1fr; }
-    }
-    @media (max-width: 640px) {
-      .shell { width: min(100% - 22px, 1480px); padding-top: 16px; }
-      .brand-sub, .clock { display: none; }
-      .topbar { padding-bottom: 16px; }
-      .hero { border-radius: 22px; }
-      .hero-copy { min-height: 360px; padding: 30px 24px; }
-      h1 { font-size: 43px; }
-      .monitor-wrap { min-height: auto; padding: 26px 17px; }
-      .device { padding: 12px; border-radius: 20px; }
-      .monitor { padding: 16px; }
-      .monitor-state { margin-top: 23px; }
-      .monitor-desc { margin-top: 12px; min-height: 30px; }
-      .monitor-rule { margin: 11px 0 9px; }
-      .monitor-task-label { margin-top: 10px; }
-      .metrics { grid-template-columns: repeat(2, 1fr); }
-      .metric-card { min-height: 122px; padding: 18px; }
-      .panel { padding: 20px; }
-      .session { grid-template-columns: 8px minmax(0,1fr); }
-      .session-side { display: none; }
-      .context-gauge { grid-template-columns: 92px minmax(0,1fr); gap: 16px; }
-      .gauge { width: 92px; }
-      .gauge::before { width: 70px; }
-      .footer { flex-direction: column; gap: 5px; }
+    @media (max-width: 960px) {
+      .live-console, .bottom-grid, .grid-3 { grid-template-columns: 1fr; }
+      .topbar { flex-direction: column; align-items: flex-start; }
     }
   </style>
 </head>
-<body data-page-node-id="OANtFL54yCvsgJiykcclM9">
-  <main class="shell" data-page-node-id="hwtHLxlBdm5Gzol3uCPZP8">
-    <header class="topbar" data-page-node-id="YzFNbPGUpcKId7N1Qfumo3">
-      <div class="brand" data-page-node-id="RsCcPN6ip7fQT0hLKPPq3g">
-        <div class="mark" aria-hidden="true" data-page-node-id="GpYMrKvPbmBLHCOlGCyB10">
-          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" data-page-node-id="kHdLzCkEHamy4UBXlIxPil"><path d="M4 15V9l5-3 6 3 5-3v9l-5 3-6-3-5 3V9" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" data-page-node-id="dk2flZ02WDrJMxJmgGZKpV"/><path d="M9 6v9m6-6v9" stroke="currentColor" stroke-width="1.5" data-page-node-id="KMfaTGwUfOtvYsfqXKbFzQ"/></svg>
+<body data-page-node-id="Htmqcj8QrljzWrhEsYMGKH">
+  <main class="shell" data-page-node-id="jwq8OeVYXM3Hx1M7LeADDp">
+
+    <!-- 顶部状态栏：品牌 + 首屏置顶常驻今日 Token 总量 + 连接/时钟 -->
+    <header class="topbar" data-page-node-id="I6OOYIotSVUHHqhQ3Z5a5T">
+      <div class="brand" data-page-node-id="aKjS7MAC60FQaikZGUFdkF">
+        <div class="brand-mark" data-page-node-id="3gEAnpMjrL4wPV7bHLryLb">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" data-page-node-id="WVgOXsUFq8e2x1O5Pi6pk4">
+            <path d="M4 15V9l5-3 6 3 5-3v9l-5 3-6-3-5 3V9" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" data-page-node-id="6ly6MZy4VQTzZsbNFvw6Ng"/>
+            <path d="M9 6v9m6-6v9" stroke="currentColor" stroke-width="1.5" data-page-node-id="talI4ph9MwV6ydoCKumYxf"/>
+          </svg>
         </div>
-        <div data-page-node-id="8iUV0gP4LWGjp9Y7OIEG1i">
-          <div class="brand-name" data-page-node-id="HYZtvDC7TB09nHCxMvrB4U">WORKBUDDY / BRIDGE</div>
-          <div class="brand-sub" data-page-node-id="IDvVD0Qkj5FNVnN9sKWiTV">本地工作台数据桥 · 只呈现已确认的数据</div>
+        <div data-page-node-id="4DN5BQqh99CUQLMHumDw4u">
+          <div class="brand-name" data-page-node-id="wJ1rDoNgKcdFsvxvNyskHv">WORKBUDDY · BRIDGE</div>
         </div>
       </div>
-      <div class="top-actions" data-page-node-id="KHfDswM0PYAVMEinrCHN3l">
-        <div class="clock" id="top-clock" data-page-node-id="NAymDb11oRyPEyDByBSIuE">--:--:--</div>
-        <div class="live-pill" id="connection-pill" data-page-node-id="6jRnQF2Q51GAkTrFwyHknL"><span class="live-dot" data-page-node-id="7tD9M3Pf2hEY6ANrlUhUk7"></span><span id="connection-text" data-page-node-id="XgPHWz5O5Jf050KetMEL5f">正在连接</span></div>
+
+      <!-- 常驻置顶：当前任务模型 + 今日总消耗 Token (彻底去重并前置) -->
+      <div class="top-center-stats" id="top-stats">
+        <div class="top-model-pill" id="top-model-pill">
+          <span class="top-model-icon">✦</span>
+          <span class="top-model-label">当前模型</span>
+          <span class="top-model-name" id="top-model-name">--</span>
+        </div>
+        <div class="top-token-pill" id="today-token-pill">
+          <span class="top-token-label">今日总消耗</span>
+          <span class="top-token-total" id="top-today-total">0</span>
+          <span class="top-token-sub" id="top-today-sub">TOKENS</span>
+        </div>
+      </div>
+
+      <div class="top-actions" data-page-node-id="O8h9Dgy5DnLsbiWNI67ulP">
+        <div class="live-pill" id="connection-pill" data-page-node-id="WLnwg2yRieHBCDjYgiv81N">
+          <span class="live-dot" data-page-node-id="OXSATke12odLFukn46gbLp"></span>
+          <span id="connection-text" data-page-node-id="jITCEHdmcVlqqbDWHVERSy">正在连接</span>
+        </div>
+        <div class="clock" id="top-clock" data-page-node-id="gTrAq0fTzuNLJPYpxpGBsX">--:--:--</div>
       </div>
     </header>
 
-    <section class="hero" aria-labelledby="page-title" data-page-node-id="stAmMP69ma0aaQl77Wwmhq">
-      <div class="hero-copy" data-page-node-id="oTQ8uvIkENKmBZvug28UD2">
-        <div data-page-node-id="eNf6E64zSqChmLnev1Dfpo">
-          <div class="eyebrow" data-page-node-id="93QMSJ1Kb4hrJnPt2HnflX">Local operations bridge</div>
-          <h1 id="page-title" data-page-node-id="UMk4YqMvEYFy0biTm2ARau">让状态可见，<br data-page-node-id="XDLjwQtDxGp7uFio7zIMrQ"><span data-page-node-id="1kOCxyyQPboprIJgaj4FJi">让数据有据。</span></h1>
-          <p class="hero-desc" data-page-node-id="9sXn5jf1BeeSHweRxxDu09">Bridge 将开发版 Monitor 与 Workbuddy 本地运行数据汇聚到一个页面。页面不制造占位数字：数据源没有返回的内容，不会出现在这里。</p>
+    <!-- 首屏控制台：1:1 实体屏仿真 + 右侧实时增量看板 (去重) -->
+    <section class="live-console" data-page-node-id="xAs6AzgXHec2lQQCI8oQgW">
+
+      <!-- 1:1 实体屏幕仿真 (严格还原固件 display_hud.cpp 坐标与指标) -->
+      <div class="device-shell" data-page-node-id="kizlwM9Fy0Qv2xNq90yJAa">
+        <div class="device-head" data-page-node-id="FlJgPdTqpOcsM52FCvXKPC">
+          <span class="screw" data-page-node-id="cHiCwGZgIZfTPEn5VRMjPy"></span>
+          <span data-page-node-id="nKNJ5mhT201JnnDLU3GfeE">HARDWARE MONITOR · 320 × 240</span>
+          <span class="screw" data-page-node-id="1lMBP7NO7D6VFQOcINbnaJ"></span>
         </div>
-        <div class="hero-live" id="hero-live" data-page-node-id="gDzxlNYCyFwSC64v4BFG3T">
-          <div class="hero-live-label" data-page-node-id="TV7aNI8qMmL8qauTheXAve">Latest signal</div>
-          <div class="hero-live-title" id="hero-live-title" data-page-node-id="qXYw0w89HY5eHRG80ld1CG">等待 Workbuddy 信号</div>
-          <div class="hero-live-desc" id="hero-live-desc" data-page-node-id="ZxTqdoeeBExutA4boT8aDV">正在连接本地 Bridge…</div>
-          <div class="hero-live-model" id="hero-live-model" hidden data-page-node-id="CM7J9bUqcW2MVSXqLFtnpl"></div>
-          <div class="token-receipt" id="hero-live-usage" title="缓存 Token 已包含在输入与总量内" hidden data-page-node-id="8v0wQn8F9RZVRM3j3HcTyx">
-            <div class="token-receipt-head" data-page-node-id="fDrLKiViyXhq6xHNLUyJC6"><span class="token-receipt-label" id="hero-token-label" data-page-node-id="qsV17BSYFuWCVRVZ2QC8IE">本轮完成凭据</span><strong class="token-receipt-total" data-page-node-id="2Ykh3K2xU5j4dBOCkJ0YX5"><span id="hero-token-total" data-page-node-id="09OinmgesOfyIHRtIwU7se">—</span><small data-page-node-id="JIF0kbCA5U3ETYpxiZlcul">TOKENS</small></strong></div>
-            <div class="token-breakdown" data-page-node-id="1Ag9YFX8JbI6O0ZVUPUPu6"><span data-page-node-id="gAfezVyG9tClQhZBUKxgEN">输入 <b id="hero-token-input" data-page-node-id="rt0GTkFqehZRZ8UpgldkkH">—</b></span><span data-page-node-id="b9dTn5vzAkQlQBLnpzVRLf">输出 <b id="hero-token-output" data-page-node-id="TnLNyRcviZFg5r5jrVEYMq">—</b></span><span data-page-node-id="kVr70vjP2KDHWtbrG3r7XA">缓存命中 <b id="hero-token-cached" data-page-node-id="zkT7lGUEmwPU7JtsvKb7S8">—</b></span><span id="hero-token-calls-wrap" data-page-node-id="cahDL1fqPvm1p7jDiJG3my">模型调用 <b id="hero-token-calls" data-page-node-id="p3HdjO2G84ooRs16QKesVF">—</b></span></div>
+        <div class="monitor" id="monitor" data-page-node-id="ieUdn0YcyiXieRomqg66zt">
+          <div class="monitor-head" data-page-node-id="GX2Sy7kxquuGrmSg6k32jY">
+            <span class="monitor-logo" data-page-node-id="lvz7yoQNjVvjwEv1R6GRcG">workbuddy</span>
+            <span class="monitor-model" id="monitor-model" data-page-node-id="9TKoQ4vk4gnKM4wErWwIHw"></span>
+            <span class="monitor-clock" id="monitor-clock" data-page-node-id="MkBflMmtmO7kwXWARgdXEh">--:--:--</span>
           </div>
-          <div class="token-receipt today-receipt" id="hero-today-usage" style="margin-top: 10px; border-color: rgba(95,242,186,.25); background: rgba(95,242,186,.04);" hidden>
-            <div class="token-receipt-head"><span class="token-receipt-label" style="color: var(--mint);">今日全天累计</span><strong class="token-receipt-total" style="color: var(--mint);"><span id="hero-today-total">—</span><small>TOKENS</small></strong></div>
-            <div class="token-breakdown"><span>会话数 <b id="hero-today-sessions">—</b></span><span>输入 <b id="hero-today-input">—</b></span><span>输出 <b id="hero-today-output">—</b></span><span>缓存命中 <b id="hero-today-cached">—</b></span></div>
+          <div class="monitor-net-row" data-page-node-id="monitor-net-row">
+            <span class="rssi-tag" id="monitor-net-wifi" data-page-node-id="monitor-net-wifi">Wi-Fi: 离线</span>
+            <span class="ip-tag" id="monitor-net-ip" data-page-node-id="monitor-net-ip">--</span>
+          </div>
+
+          <div class="monitor-state-wrap" id="monitor-bar" data-page-node-id="AQPJsetiaZcQpQxAxkjWHI">
+            <div class="monitor-state" id="monitor-state" data-page-node-id="2GPHllw0xVYAqHiZQ23oAy">连接中</div>
+            <div class="monitor-desc" id="monitor-desc" data-page-node-id="5LnxL4DKbwqRCUwqGrAImL">正在读取本地实时状态总线</div>
+          </div>
+
+          <!-- 真实指标行 (状态 / 用时 / 本轮 / 今日) -->
+          <div class="monitor-metrics-bar" data-page-node-id="pIFmCrrmaJEWj8YPXDWqcI">
+            <strong id="monitor-state-small" data-page-node-id="cgRwxMDc3qorqV2HzOW48c">同步中</strong>
+            <span class="dur" id="monitor-duration" data-page-node-id="wTSSHUwOgmvNSUMKyNE7P5">用时 00:00</span>
+            <span class="s-tok" id="monitor-session-token" data-page-node-id="yeQt9B3QzS9JhXBnb2Toxg">本轮 0</span>
+            <span class="t-tok" id="monitor-today-token" data-page-node-id="QszsyXODCwG7oipQ15U29I">今日 0</span>
+          </div>
+
+          <div class="monitor-task-area">
+            <div class="monitor-task-label">
+              <span>当前任务</span>
+              <span class="monitor-task-pager" id="monitor-task-pager" hidden>1/1</span>
+            </div>
+            <div class="monitor-task-roll">
+              <div class="monitor-task" id="monitor-task">等待数据</div>
+            </div>
+          </div>
+
+          <div class="monitor-foot" data-page-node-id="zPcy03fiwI1aeNaMrhA9an">
+            <span id="monitor-progress" data-page-node-id="QoQmylNCCxHv5J5EtoPW19">最新进度 · 等待新的任务</span>
+            <span data-page-node-id="0cZBHD0Va60V3j0HcGGRaw">LIVE</span>
           </div>
         </div>
       </div>
 
-      <div class="monitor-wrap" data-page-node-id="YWa81AyJHsK96xtOZORrSU">
-        <div class="device" aria-label="当前开发版 Monitor 实时镜像" data-page-node-id="By5UYwgWmTeFM1AdAlPDn3">
-          <div class="device-head" data-page-node-id="GbBKXDDOktqEr7OJmSvJsX"><span class="screw" data-page-node-id="BeAR0MsEz7aWIJtSYW7Rvv"></span><span data-page-node-id="OINTnK5Z0UJETrlEyHDpdl">DEVELOPMENT MONITOR · 320 × 240</span><span class="screw" data-page-node-id="4AiA4KCKb1FqSl3oeRP7Sy"></span></div>
-          <div class="monitor" id="monitor" data-page-node-id="0wI9M0EEMETeTax34mSjLl">
-            <div class="monitor-head" data-page-node-id="hIWTwvslBzv5dYOHKYVUSq"><span class="monitor-logo" data-page-node-id="Pnu4tkE4WF4l6vVz3WkdeG">workbuddy</span><span class="monitor-model" id="monitor-model" hidden data-page-node-id="jIvni21m3ImYEiHuaP0gKx"></span><span class="monitor-clock" id="monitor-clock" data-page-node-id="fcL1e5asWgA2Xq8Dd8tJEW">--:--:--</span></div>
-            <div class="monitor-state" id="monitor-state" data-page-node-id="m8fbuHVRSsIu5XT0h1T4tO">连接中</div>
-            <div class="monitor-desc" id="monitor-desc" data-page-node-id="X6DMEZF2wmjSV2d5DFmqi5">正在读取本地实时状态总线</div>
-            <div class="monitor-rule" data-page-node-id="KsVmrwrotNgOo9Spw1dGbi"></div>
-            <div class="monitor-metrics" data-page-node-id="5kCO3L5AqjgfymWkPDyoit"><strong id="monitor-state-small" data-page-node-id="ILGK3bZVUWIsWTKMVTLYCq">同步中</strong><span id="monitor-duration" data-page-node-id="iXEbEWFdW8fdH72dXBQtx7">用时 --:--</span><span class="monitor-token" id="monitor-session-token" style="color: var(--cyan)">本轮 —</span><span class="monitor-token" id="monitor-today-token" style="color: var(--mint)">今日 —</span></div>
-            <div class="monitor-task-label" data-page-node-id="9M8qjPRsD7MYv17LjGHrx5">当前任务</div>
-            <div class="monitor-task" id="monitor-task" data-page-node-id="uO1FCBNHYvKO7nX3nyMzQv">等待数据</div>
-            <div class="monitor-foot" data-page-node-id="vA9ls0rrIqXaceRwDZqOzS"><span id="monitor-progress" data-page-node-id="1AErgobS7Kr68IVuXKNTru">最新进度 · —</span><span data-page-node-id="cUBvTnwPHUmGOwGw4JaImQ">LIVE</span></div>
-          </div>
+      <!-- 右侧增量看板 (随状态动态切换，展示实体小屏放不下的关键增量) -->
+      <div class="action-board" id="action-board" data-page-node-id="QRUXGyI3JIeoC3UkFyCTyQ">
+        <div class="action-board-head" data-page-node-id="KFHfQoArinUouVvAlD9enY">
+          <div class="action-board-title" id="action-title" data-page-node-id="KS3anMz14JdJfoXYIKeIMw">Agent 实时调用 (Live Trace)</div>
+          <div class="action-board-tag" id="action-tag" data-page-node-id="blTEeCgEEen5mDhYl68AvP">MONITORING</div>
+        </div>
+
+        <div id="action-content" style="flex: 1; display: flex; flex-direction: column; justify-content: space-between; margin-top: 6px;" data-page-node-id="tS1CWFY0DF7dwArOzRtgrh">
+          <!-- 动态注入流水或交互操作 -->
+        </div>
+
+        <div style="font-size: 10px; color: var(--faint); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; display: flex; justify-content: space-between; border-top: 1px solid rgba(195,229,216,.08); padding-top: 8px;" data-page-node-id="T3nUmJLGYtuL7Ch6jGYYXv">
+          <span id="action-sub-info" data-page-node-id="sz6edf8MdZLTT3YIxa1FRJ">USB-CDC 115200 bps · 帧率 10Hz</span>
+          <span id="action-rate-info" data-page-node-id="3N0gCN23oRwORfQge8wVaJ">延迟 < 15ms</span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- 第二层：今日统计与数据透视 (去重收敛) -->
+    <section class="grid-3" data-page-node-id="JefS1dg6jI3QmToeo4RXC8">
+      <!-- 卡片 1: 今日工具调用分布 -->
+      <div class="card" id="tool-panel" data-page-node-id="5hhwJIbckThC8I1kaXt3nc">
+        <div class="card-head" data-page-node-id="AiJCNmH4zxMEvu5Xye25rR">
+          <span data-page-node-id="xl537waREBjTZMu3EGwFUN">今日工具调用</span>
+          <span id="tool-count" data-page-node-id="Wh4BYO7rvOoLQ63HFeUsao">0 CALLS</span>
+        </div>
+        <div class="bar-list" id="tool-list" data-page-node-id="a27jIHBImxA0gK0rb9Z6Oc">
+          <div style="font-size: 11px; color: var(--faint); padding: 10px 0;" data-page-node-id="0tc0cDNwPFTiIDvTyIe05t">等待工具调用数据...</div>
+        </div>
+      </div>
+
+      <!-- 卡片 2: 7 日会话活跃趋势 -->
+      <div class="card" id="activity-panel" data-page-node-id="qa6ae6HDPA5TMHOP1QNUal">
+        <div class="card-head" data-page-node-id="lhsrE0NZNEtadx2telC8CY">
+          <span data-page-node-id="xyEd3g0LWlhctIdicZLDqQ">7 日会话活跃</span>
+          <span data-page-node-id="rul1dVuv9yT4svdKZWsLBt">ACTIVITY</span>
+        </div>
+        <div class="activity-chart" id="activity-chart" data-page-node-id="e5WDLn6citc5luvdH45OXw"></div>
+      </div>
+
+      <!-- 卡片 3: 上下文占用与模型分布 -->
+      <div class="card" id="context-panel" data-page-node-id="34DflDgUcPHNw18xlK2TCF">
+        <div class="card-head" data-page-node-id="QjWf1oa6qQUTASiAZ0rkel">
+          <span data-page-node-id="Gg4HOwdCCv3NjCsJkloXWf">模型分布与上下文</span>
+          <span id="model-main-tag" data-page-node-id="5hl2aCyeGyKrsZCG8nHRNr">MODELS</span>
+        </div>
+        <div class="bar-list" id="model-list" data-page-node-id="AF3hHWy0DTcBO1s6CLQmse">
+          <div style="font-size: 11px; color: var(--faint); padding: 10px 0;" data-page-node-id="AxWuppxZe4PFK3tLU0FmRd">等待模型使用数据...</div>
         </div>
       </div>
     </section>
 
-    <div class="content" data-page-node-id="EWB6DD1sy1jBFXIJtuRL6r">
-      <section class="metrics" id="metrics" hidden aria-label="实时概览" data-page-node-id="mrnoZa8sH7a40y5HuRWogU"></section>
+    <!-- 第三层：历史明细与硬件管理 -->
+    <section class="bottom-grid" data-page-node-id="j8eTYjbEnDbSYh4m5VjI0g">
+      <!-- 左：最近会话列表 -->
+      <div class="card" id="recent-panel" data-page-node-id="FjhYh4MT8hUKTBdv6fq9dQ">
+        <div class="card-head" data-page-node-id="mzdpnUrbHN28XvGFCV52Al">
+          <span data-page-node-id="ORNCCGoKQZUO9w4WmsciRp">最近会话明细</span>
+          <span id="recent-count" data-page-node-id="n0YfKU9vMaYgfr9efNgEJT">0 SESSIONS</span>
+        </div>
+        <div class="session-list" id="recent-list" data-page-node-id="DUZZ04WZbCPRbPCe37Ss2B"></div>
+      </div>
 
-      <div class="dashboard-grid" id="dashboard-grid" hidden data-page-node-id="REwLau2rMc5lrr8EFOXZwA">
-        <div class="stack" id="main-stack" data-page-node-id="ZAoChfkOVabUizrP3QnRLN">
-          <section class="panel" id="recent-panel" hidden data-page-node-id="gspmSllJMnmEIUrUtJlbTH">
-            <div class="panel-head" data-page-node-id="QdjBMUE7SCkcalDApMCq63"><div data-page-node-id="3ukDLBRTLEY0zEA0Vajisd"><div class="panel-title" data-page-node-id="AIqkLRR3f0DjgUZHC8GFlk">最近会话</div><div class="panel-note" data-page-node-id="gKNfYb4OI8u6Q9OrPNPX8W">来自 Workbuddy 本地会话索引，不包含 Prompt 内容</div></div><div class="panel-count" id="recent-count" data-page-node-id="OVPwD4FDzQUb3EshKghMk3"></div></div>
-            <div class="session-list" id="recent-list" data-page-node-id="wzI2yAAGBHFeY9ixSNq9n1"></div>
-          </section>
-
-          <section class="panel" id="activity-panel" style="--panel-color: var(--cyan)" hidden data-page-node-id="2McxQp6a8h30WkJVDpYgrI">
-            <div class="panel-head" data-page-node-id="cCvlF9hRbEszrrOMjjF53J"><div data-page-node-id="5P8PaLE4eE4mgVIzJdXBiY"><div class="panel-title" data-page-node-id="9lfVg5bTemQgAzmJy6H7qV">会话活动</div><div class="panel-note" data-page-node-id="twD2tl9BflGypP9mD9WhEM">按最近活跃时间统计 7 日会话</div></div><div class="panel-count" data-page-node-id="KTO0nUy21dDiD2XMlijYUH">LOCAL TIME</div></div>
-            <div class="activity-chart" id="activity-chart" data-page-node-id="nkI82KoJpjCNfoQIdmFaV1"></div>
-          </section>
-
-          <section class="panel" id="tool-panel" style="--panel-color: var(--cyan)" hidden data-page-node-id="SGkmTI4hLUUiJQuPSTkkip">
-            <div class="panel-head" data-page-node-id="J0QszJZbHw4yqfpEjDZNNJ"><div data-page-node-id="zrDhbykq0xLyInY97safIN"><div class="panel-title" data-page-node-id="FU3VcHyOB39CBE9cmWrHtE">今日工具调用</div><div class="panel-note" data-page-node-id="CpTIt7NQIesFvlLqfefwG5">仅统计 trace 类型与工具名，不读取参数</div></div></div>
-            <div class="bar-list" id="tool-list" data-page-node-id="K2HTSjIG3vVLsh5tG1gzuY"></div>
-          </section>
-
-          <section class="panel" id="automation-panel" style="--panel-color: var(--amber)" hidden data-page-node-id="iZqYQEDsjI1ryVOOfnc8JQ">
-            <div class="panel-head" data-page-node-id="MkK3CO15Oo6cEkQ24GyIGr"><div data-page-node-id="iwEQYzBQrovcJFLIidSUft"><div class="panel-title" data-page-node-id="DYdFhsPhZ99FSDRX5TadMh">自动化</div><div class="panel-note" data-page-node-id="OwLvtXLYbqmHXYZCZTc1mb">仅显示已配置的 Workbuddy 自动化任务</div></div><div class="panel-count" id="automation-count" data-page-node-id="srvI0meQG0VK8yf78bBJn7"></div></div>
-            <div class="automation-list" id="automation-list" data-page-node-id="o7oXdG1NUHmpRa1VWYD51f"></div>
-          </section>
+      <!-- 右：V2.0 硬件与 Wi-Fi 配置 -->
+      <div class="card" id="wifi-panel" data-page-node-id="ZcwYkoNrIZnxPVrjG2iDH4">
+        <div class="card-head" data-page-node-id="4DnILa25EnoWJqObq26WU3">
+          <span data-page-node-id="Wvj0gRXhfY8EFxML8xi9wg">V2.0 硬件与 Wi-Fi 配置</span>
+          <span data-page-node-id="t9Nz05mXBFoy7mZroh3nqV">HARDWARE</span>
+        </div>
+        <div class="wifi-status-row" data-page-node-id="vDmYcyZv4bc6pE4ZEIqKC2">
+          <div class="wifi-stat-box" data-page-node-id="kO1SoeW5H5tpjj8AKExD35"><span data-page-node-id="I3rdMoynJACiU8fOgtZODC">USB 串口</span><strong id="wifi-usb-status" data-page-node-id="iJYb0jYz8LgD1sSUE6a2Ez">未连接</strong></div>
+          <div class="wifi-stat-box" data-page-node-id="MDEwRVDIvI2LGejQZ9bGle"><span data-page-node-id="IuvsFxDgYcpL14D5Ae7f4S">配对状态</span><strong id="wifi-pair-status" data-page-node-id="4C1AdmV7JGgH8D7X9n1ave">未配对</strong></div>
+          <div class="wifi-stat-box" data-page-node-id="eURtP4KkVWtDe04jiEPyJR"><span data-page-node-id="h6cALQH7vguN9OGSNOe9NT">无线连接</span><strong id="wifi-client-status" data-page-node-id="8XMGuvaM4fEoKFsR1OaeOw">0 台</strong></div>
+          <div class="wifi-stat-box"><span id="wifi-rssi-label">信号强度</span><strong id="wifi-signal-status"><span class="signal-bars"><span class="signal-bar"></span><span class="signal-bar"></span><span class="signal-bar"></span><span class="signal-bar"></span></span> 未连接</strong></div>
         </div>
 
-        <aside class="stack" id="side-stack" data-page-node-id="hf9MwZVXzE93BOzqoZ5ypE">
-          <section class="panel" id="context-panel" style="--panel-color: var(--violet)" hidden data-page-node-id="wwQxbpVOmM30ZVHHtja2jp">
-            <div class="panel-head" data-page-node-id="SsG1Jezfu7OuQLnJU7dpUi"><div data-page-node-id="flkdFg8vFHs9KN7VP6YtTk"><div class="panel-title" data-page-node-id="7UasqvvGwKEEzrW22KmX41">最近上下文占用</div><div class="panel-note" data-page-node-id="YcN4j2WTCI4CnRmXJPsYyZ">最新有用量记录的会话</div></div></div>
-            <div class="context-gauge" data-page-node-id="Frk0yoMB1DEngC6c0DaSZp"><div class="gauge" id="context-gauge" data-page-node-id="xUtmrbvWUBKS5L2ouFnpQc"><span class="gauge-value" id="context-percent" data-page-node-id="m0rCYDVcFff5s4RBYylvrF">0%</span></div><div class="context-copy" data-page-node-id="TwyqHKjPmQUjrAc7p393WR"><strong id="context-title" data-page-node-id="hUA84XNvC1N0Cj0rek8fm7">上下文窗口</strong><p id="context-session" data-page-node-id="tcQkHpaTo4hDm1JmV5N8ua"></p><div class="context-numbers" id="context-numbers" data-page-node-id="59DFD63Zs6nSm4uH2HzEBR"></div></div></div>
-          </section>
+        <!-- 已连接就绪视图 (Connected View) -->
+        <div class="wifi-connected-box" id="wifi-connected-view" hidden>
+          <div class="wifi-connected-head">
+            <span class="wifi-connected-badge">Wi-Fi 已连接成功</span>
+            <span style="font-size: 10px; color: var(--faint);" id="wifi-connected-time">局域网通信已就绪</span>
+          </div>
+          <div class="wifi-details-grid">
+            <div class="wifi-detail-item">
+              <span>当前网络 (SSID)</span>
+              <strong id="wifi-connected-ssid">--</strong>
+            </div>
+            <div class="wifi-detail-item">
+              <span>设备 IP 地址</span>
+              <strong id="wifi-connected-ip">--</strong>
+            </div>
+            <div class="wifi-detail-item">
+              <span>实时信号</span>
+              <strong id="wifi-connected-signal">--</strong>
+            </div>
+            <div class="wifi-detail-item">
+              <span>传输通道</span>
+              <strong id="wifi-connected-stream">WebSocket / UDP 广播</strong>
+            </div>
+          </div>
+          <div class="wifi-actions">
+            <button class="wifi-btn secondary" id="wifi-toggle-config-btn" type="button">切换 Wi-Fi 网络</button>
+            <button class="wifi-btn secondary" id="wifi-unpair-button" type="button" data-page-node-id="9Plz9Xs9PBjZJSyRdJvjZO">解除安全配对</button>
+          </div>
+        </div>
 
-          <section class="panel" id="model-panel" hidden data-page-node-id="vca7sIZviP8ZpPidw4aobM">
-            <div class="panel-head" data-page-node-id="AcL6AMttHTBpeVzg9Wfd6V"><div data-page-node-id="oXzXm2syUWFNmZNArvbM69"><div class="panel-title" data-page-node-id="ftKsxGqGg4QtcZGkQFUJCR">模型使用分布</div><div class="panel-note" data-page-node-id="fv01YCJJOTenOEr8PS6Ovn">按历史会话数统计</div></div></div>
-            <div class="bar-list" id="model-list" data-page-node-id="BPuJ5fVCsDxhtDjlLfqEKH"></div>
-          </section>
+        <!-- 配网/配置表单视图 (Config Form View) -->
+        <div class="wifi-form" id="wifi-config-view" data-page-node-id="mODF9H4PtpgWW5gajHTimf">
+          <div class="wifi-actions" data-page-node-id="tca4xEjTDtvj07GiueKGNH">
+            <button class="wifi-btn" id="wifi-pair-button" type="button" data-page-node-id="NHb6UsqgREb26E2MwS1UCM">安全配对</button>
+            <button class="wifi-btn" id="wifi-scan-button" type="button" data-page-node-id="XlVQOIBBFKPidDB5Lff0q8">扫描 2.4G Wi-Fi</button>
+          </div>
+          <select id="wifi-ssid" aria-label="Wi-Fi 网络" data-page-node-id="aP6E0fx21RX4MePzwz2Ruk"><option value="" data-page-node-id="hiBJFH2HecLTcqULEYQtyo">请先扫描 Wi-Fi</option></select>
+          <input id="wifi-manual-ssid" type="text" maxlength="32" autocomplete="off" placeholder="手动 SSID（扫描不到时填写）">
+          <input id="wifi-password" type="password" autocomplete="new-password" placeholder="Wi-Fi 密码" data-page-node-id="s2SnEEnFODe5hfYjGn0CKC">
+          <input id="wifi-host-ip" type="text" inputmode="decimal" autocomplete="off" placeholder="手动 Host IP（可选；留空自动发现）" data-page-node-id="SE2EtIWwuKGyx2VF4Wea8c">
+          <div class="wifi-msg" id="wifi-host-hint">当前本机 Host IP：检测中；通常可留空。</div>
+          <div class="wifi-actions">
+            <button class="wifi-btn primary" id="wifi-save-button" type="button" data-page-node-id="q2S75M1sClwXemL6hEj4V9">保存并验证连接</button>
+            <button class="wifi-btn secondary" id="wifi-cancel-config-btn" type="button" hidden>取消返回</button>
+          </div>
+        </div>
 
-          <section class="panel" id="workspace-panel" hidden data-page-node-id="JcHcZgh65ag7PDGOxC8tYM">
-            <div class="panel-head" data-page-node-id="ziau98xXxHbCTTv0sR64Nk"><div data-page-node-id="RhHH570VGqtEDV7NtUWWBY"><div class="panel-title" data-page-node-id="5JBTHxtmjF5YorzsgilXh3">最近工作区</div><div class="panel-note" data-page-node-id="H71NNLQ6VL9Sa6FpOqPpkf">为保护本地隐私，仅显示目录名</div></div></div>
-            <div class="workspace-list" id="workspace-list" data-page-node-id="fm9qXl2bXoWfDoZt2Lownd"></div>
-          </section>
-        </aside>
+        <div class="wifi-msg" id="wifi-message" data-page-node-id="DYENBlNJnduRkyQBcBYU4g">请用 USB 连接开发板进行 Wi-Fi 配网。</div>
       </div>
-    </div>
+      </div>
+    </section>
 
-    <footer class="footer" data-page-node-id="EdXLNvU4sj8gyNkY9SFfCv"><span data-page-node-id="BGiwgkz6BSntil9NWXLTOj">Source · ~/.workbuddy-ai/workbuddy.db + traces</span><span id="last-sync" data-page-node-id="s3dPMFyxD7NEykyC3Yx65q">尚未同步</span></footer>
+    <footer class="footer" data-page-node-id="tFpY5bfGVpauQ8aK8zLHEF">
+      <span data-page-node-id="nzlHLe2PPovnStZ94aqQqA">SOURCE · ~/.workbuddy-ai/workbuddy.db + traces</span>
+      <span id="last-sync" data-page-node-id="e3rPDSOtnCrTWh3sSLSctl">尚未同步</span>
+    </footer>
+
   </main>
 
   <script>
@@ -608,119 +898,244 @@
       working: '#59dcec', completed: '#5ff2ba', terminated: '#ffbd66', failed: '#ff6b67',
       pending: '#ac8cff', active: '#5ff2ba', paused: '#83918d'
     };
-    const metricDefinitions = {
-      sessions: { label: '今日会话', note: '今日活跃会话数', color: '#5ff2ba', mark: '↗' },
-      working: { label: '正在执行', note: '当前活跃会话', color: '#59dcec', mark: '●' },
-      completed: { label: '今日完成', note: '已完成会话', color: '#5ff2ba', mark: '✓' },
-      tool_calls: { label: '工具调用', note: '今日 trace 记录', color: '#59dcec', mark: '⌘' },
-      generations: { label: '模型调用', note: '今日 generation spans', color: '#ac8cff', mark: '✦' },
-      tokens: { label: '今日 Token', note: '全部会话 Trace 合计', color: '#5ff2ba', mark: 'Σ' },
-      trace_errors: { label: 'Trace 异常', note: '今日异常 spans', color: '#ff6b67', mark: '!' },
-      terminated: { label: '已终止', note: '今日终止会话', color: '#ffbd66', mark: '■' },
-      failed: { label: '失败会话', note: '今日失败会话', color: '#ff6b67', mark: '!' }
-    };
 
     const el = id => document.getElementById(id);
-    const BRIDGE_API_URL = window.location.protocol === 'file:'
-      ? 'http://127.0.0.1:5200/api/bridge'
-      : '/api/bridge';
-    const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
-    const formatClock = value => value ? new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(new Date(value)) : '—';
-    const formatShortTime = value => value ? new Intl.DateTimeFormat('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(value)) : '';
-    const formatDay = value => {
-      const parts = String(value || '').split('-');
-      return parts.length === 3 ? `${Number(parts[1])}/${Number(parts[2])}` : value;
-    };
-    const formatTokenExact = value => Number(value || 0).toLocaleString('en-US');
-    const formatTokenCompact = (value, label) => label || new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(Number(value || 0));
+    const BRIDGE_API_URL = window.location.protocol === 'file:' ? 'http://127.0.0.1:5200/api/bridge' : '/api/bridge';
+    const apiUrl = path => window.location.protocol === 'file:' ? `http://127.0.0.1:5200${path}` : path;
+    const escapeHtml = val => String(val ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+    const formatClock = v => v ? new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(new Date(v)) : '—';
+    const formatShortTime = v => v ? new Intl.DateTimeFormat('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(v)) : '';
+    const formatDay = v => { const p = String(v || '').split('-'); return p.length === 3 ? `${Number(p[1])}/${Number(p[2])}` : v; };
+    const formatTokenExact = v => Number(v || 0).toLocaleString('en-US');
 
+    // 多任务翻滚轮播状态管理
+    let activeTasks = [];
+    let currentTaskIndex = 0;
+    let rollInterval = null;
+
+    function triggerTaskRoll() {
+      if (activeTasks.length <= 1) {
+        el('monitor-task-pager').hidden = true;
+        return;
+      }
+      const pager = el('monitor-task-pager');
+      const taskEl = el('monitor-task');
+      pager.hidden = false;
+
+      taskEl.classList.add('roll-out');
+      setTimeout(() => {
+        currentTaskIndex = (currentTaskIndex + 1) % activeTasks.length;
+        const current = activeTasks[currentTaskIndex];
+        taskEl.textContent = activeTasks.length > 1 ? `[${current.state}] ${current.title}` : current.title;
+        pager.textContent = `${currentTaskIndex + 1}/${activeTasks.length} ↻`;
+        taskEl.classList.remove('roll-out');
+        taskEl.classList.add('roll-in');
+        setTimeout(() => {
+          taskEl.classList.remove('roll-in');
+        }, 350);
+      }, 350);
+    }
+
+    function syncActiveTasks(liveData, recentSessions) {
+      const list = [];
+      const liveTitle = String(liveData?.alert_title || '').trim();
+      const liveState = String(liveData?.state || 'IDLE').toUpperCase();
+
+      if (liveTitle && liveTitle !== '工作台就绪' && liveTitle !== '等待数据') {
+        list.push({ title: liveTitle, state: liveState, model: liveData?.model || '' });
+      }
+
+      if (Array.isArray(recentSessions)) {
+        recentSessions.forEach(s => {
+          const st = String(s.status || '').toLowerCase();
+          const title = String(s.title || '').trim();
+          if ((st === 'working' || st === 'pending') && title && !list.some(item => item.title === title)) {
+            list.push({
+              title: title,
+              state: st === 'working' ? 'RUNNING' : 'PENDING',
+              model: s.model || ''
+            });
+          }
+        });
+      }
+
+      activeTasks = list;
+      const pager = el('monitor-task-pager');
+      const taskEl = el('monitor-task');
+
+      if (activeTasks.length === 0) {
+        pager.hidden = true;
+        taskEl.textContent = liveTitle || '等待数据';
+        if (rollInterval) { clearInterval(rollInterval); rollInterval = null; }
+      } else if (activeTasks.length === 1) {
+        pager.hidden = true;
+        taskEl.textContent = activeTasks[0].title;
+        if (rollInterval) { clearInterval(rollInterval); rollInterval = null; }
+      } else {
+        pager.hidden = false;
+        pager.textContent = `${currentTaskIndex + 1}/${activeTasks.length} ↻`;
+        // 如果当前是单任务文字，更新带状态前缀
+        const current = activeTasks[currentTaskIndex] || activeTasks[0];
+        taskEl.textContent = `[${current.state}] ${current.title}`;
+        if (!rollInterval) {
+          rollInterval = setInterval(triggerTaskRoll, 3800);
+        }
+      }
+    }
+
+    // 渲染实时状态与右侧增量看板
     function renderLive(data) {
       const state = String(data?.state || 'IDLE').toUpperCase();
-      const config = stateConfig[state] || stateConfig.IDLE;
-      document.documentElement.style.setProperty('--state-color', config.color);
+      const cfg = stateConfig[state] || stateConfig.IDLE;
+      document.documentElement.style.setProperty('--state-color', cfg.color);
+
+      // 实体屏仿真更新
       el('monitor-clock').textContent = data?.time || new Date().toTimeString().slice(0, 8);
-      el('monitor-state').textContent = config.label;
-      el('monitor-state-small').textContent = config.label;
+      el('monitor-state').textContent = cfg.label;
+      el('monitor-state-small').textContent = cfg.label;
       el('monitor-desc').textContent = data?.alert_desc || '正在监听 Workbuddy 本地状态';
       el('monitor-duration').textContent = `用时 ${data?.duration || '00:00'}`;
-      el('monitor-task').textContent = data?.alert_title || '工作台就绪';
+
       const progress = data?.timeline?.[0]?.dur || data?.alert_desc || '等待新的任务';
       el('monitor-progress').textContent = `最新进度 · ${progress}`;
-      el('hero-live-title').textContent = data?.alert_title || '工作台就绪';
-      el('hero-live-desc').textContent = `${config.label} · ${data?.alert_desc || '等待新的任务'}`;
+
+      // 实体屏网络与信号指示 (严格对齐固件 display_hud.cpp)
+      const netRssi = Number(data?.network_rssi ?? data?.rssi ?? 0);
+      const netStatus = data?.network_status || (netRssi !== 0 ? 'Wi-Fi 在线' : 'Wi-Fi 离线');
+      const netIp = data?.network_ip || data?.ip || '';
+      if (netRssi !== 0) {
+        el('monitor-net-wifi').innerHTML = `Wi-Fi <span style="color:var(--cyan);">${netRssi}dBm</span>`;
+      } else {
+        el('monitor-net-wifi').textContent = netStatus;
+      }
+      el('monitor-net-ip').textContent = netIp || (netStatus === 'Wi-Fi 离线' ? 'OFFLINE' : '--');
+
       const model = String(data?.model || '').trim();
       el('monitor-model').textContent = model;
       el('monitor-model').hidden = !model;
-      el('hero-live-model').textContent = model ? `MODEL · ${model}` : '';
-      el('hero-live-model').hidden = !model;
 
-      // 双 Token 指标渲染
+      // 顶部常驻当前模型更新
+      if (model) {
+        el('top-model-name').textContent = model;
+        el('top-model-pill').hidden = false;
+      } else {
+        el('top-model-name').textContent = '待命中';
+      }
+
       const sToken = String(data?.session_tokens || data?.tokens || '0').trim();
-      const tToken = String(data?.today_tokens || '0m').trim();
+      const tToken = String(data?.today_tokens || '0').trim();
       el('monitor-session-token').textContent = `本轮 ${sToken || '0'}`;
-      el('monitor-today-token').textContent = `今日 ${tToken || '0m'}`;
+      el('monitor-today-token').textContent = `今日 ${tToken || '0'}`;
 
-      // 本轮任务完成凭据
-      const usage = data?.session_token_usage || data?.token_usage;
-      const hasUsage = Number(usage?.total) > 0;
-      el('hero-live-usage').hidden = !hasUsage;
-      if (hasUsage) {
-        el('hero-token-label').textContent = state === 'COMPLETED' ? '本轮完成凭据' : '最近完成任务';
-        el('hero-token-total').textContent = formatTokenExact(usage.total);
-        el('hero-token-input').textContent = formatTokenExact(usage.input);
-        el('hero-token-output').textContent = formatTokenExact(usage.output);
-        el('hero-token-cached').textContent = formatTokenExact(usage.cached);
-        el('hero-token-calls').textContent = formatTokenExact(usage.calls);
-        el('hero-token-calls-wrap').hidden = !(Number(usage.calls) > 0);
-      }
-
-      // 今日全天累计用量
+      // 顶部常驻今日 Token 总量更新
       const todayUsage = data?.today_token_usage;
-      const hasTodayUsage = Number(todayUsage?.total) > 0;
-      el('hero-today-usage').hidden = !hasTodayUsage;
-      if (hasTodayUsage) {
-        el('hero-today-total').textContent = formatTokenExact(todayUsage.total);
-        el('hero-today-sessions').textContent = Number(todayUsage.sessions || 0).toLocaleString('zh-CN');
-        el('hero-today-input').textContent = formatTokenExact(todayUsage.input);
-        el('hero-today-output').textContent = formatTokenExact(todayUsage.output);
-        el('hero-today-cached').textContent = formatTokenExact(todayUsage.cached);
+      if (todayUsage && Number(todayUsage.total) > 0) {
+        el('top-today-total').textContent = formatTokenExact(todayUsage.total);
+        el('top-today-sub').textContent = `(入 ${formatTokenExact(todayUsage.input)} / 出 ${formatTokenExact(todayUsage.output)}) · ${todayUsage.sessions || 0} 会话`;
+      } else {
+        el('top-today-total').textContent = tToken || '0';
+        el('top-today-sub').textContent = 'TOKENS';
+      }
+
+      // 右侧增量看板按状态呈现 (增量设计，彻底去重)
+      const actionTitle = el('action-title');
+      const actionTag = el('action-tag');
+      const actionBox = el('action-content');
+
+      if (state === 'NEED_APPROVAL') {
+        actionTitle.textContent = '高危操作审批拦截';
+        actionTag.textContent = 'WAITING APPROVAL';
+        actionTag.style.color = 'var(--amber)';
+        actionBox.innerHTML = `
+          <div class="approval-box">
+            <div class="approval-msg">Agent 正在请求执行写盘或敏感命令：</div>
+            <div class="approval-cmd">${escapeHtml(data?.alert_title || 'Write / Edit Command')}</div>
+            <div style="font-size: 11px; color: var(--muted); margin-top: 6px;">${escapeHtml(data?.alert_desc || '')}</div>
+          </div>
+          <div class="approval-actions">
+            <button class="btn-approve" onclick="alert('审批已通过（可通过板端 BOOT 按键同步）')">一键同意 (Approve)</button>
+            <button class="btn-reject" onclick="alert('已拒绝该操作')">拒绝 (Reject)</button>
+          </div>
+          <div style="font-size: 10px; color: var(--faint); text-align: center; margin-top: 6px;">
+            硬件按键支持：短按开发板 BOOT 按键可直接硬件确认
+          </div>
+        `;
+      } else if (state === 'COMPLETED') {
+        actionTitle.textContent = '本轮任务完成审计凭据';
+        actionTag.textContent = 'RECEIPT';
+        actionTag.style.color = 'var(--mint)';
+        const usage = data?.session_token_usage || data?.token_usage || {};
+        actionBox.innerHTML = `
+          <div class="receipt-box">
+            <div class="receipt-head">
+              <span style="font-size: 12px; color: var(--muted);">本轮总消耗</span>
+              <span class="receipt-total">${formatTokenExact(usage.total || 0)} <small style="font-size: 10px; color: var(--faint)">TOKENS</small></span>
+            </div>
+            <div class="receipt-grid">
+              <div>输入<b>${formatTokenExact(usage.input || 0)}</b></div>
+              <div>输出<b>${formatTokenExact(usage.output || 0)}</b></div>
+              <div>缓存命中<b>${formatTokenExact(usage.cached || 0)}</b></div>
+              <div>模型调用<b>${formatTokenExact(usage.calls || 0)} 次</b></div>
+            </div>
+          </div>
+          <div style="font-size: 11px; color: var(--muted); margin-top: 6px;">
+            任务：${escapeHtml(data?.alert_title || '已完成')} · 耗时 ${escapeHtml(data?.duration || '00:00')}
+          </div>
+        `;
+      } else if (state === 'ERROR') {
+        actionTitle.textContent = '异常中断诊断';
+        actionTag.textContent = 'ERROR INTERCEPT';
+        actionTag.style.color = 'var(--red)';
+        actionBox.innerHTML = `
+          <div style="background: rgba(255, 107, 103, .08); border: 1px solid rgba(255,107,103,.25); border-radius: 10px; padding: 12px;">
+            <div style="color: var(--red); font-size: 12px; font-weight: 600;">Trace 捕获异常</div>
+            <div style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; margin-top: 6px; color: #ffc0bc;">
+              ${escapeHtml(data?.alert_desc || '串口推流超时或工具执行中断')}
+            </div>
+          </div>
+          <div style="font-size: 11px; color: var(--muted); margin-top: 8px;">
+            已记录至错误日志，请检查本地环境或网络通信。
+          </div>
+        `;
+      } else {
+        // RUNNING / IDLE 默认展示 Live Trace 瀑布
+        actionTitle.textContent = state === 'RUNNING' ? 'Agent 实时调用瀑布 (Live Trace)' : '工作台就绪 (Standby)';
+        actionTag.textContent = model ? `${model} · ${state}` : state;
+        actionTag.style.color = cfg.color;
+        const timeline = Array.isArray(data?.timeline) ? data.timeline : [];
+        if (timeline.length > 0) {
+          actionBox.innerHTML = `<div class="trace-list">` + timeline.map(item => `
+            <div class="trace-item" style="border-left-color: ${item.active ? 'var(--mint)' : 'rgba(195,229,216,.2)'}">
+              <span class="trace-name">${escapeHtml(item.text)}</span>
+              <span class="trace-dur">${escapeHtml(item.dur)}</span>
+            </div>
+          `).join('') + `</div>`;
+        } else {
+          actionBox.innerHTML = `
+            <div style="text-align: center; padding: 24px 0; color: var(--muted);">
+              <div style="font-size: 13px; color: var(--ink); font-weight: 500;">守护进程正在监听</div>
+              <div style="font-size: 11px; color: var(--faint); margin-top: 4px;">~/.workbuddy-ai/workbuddy.db 状态就绪</div>
+            </div>
+          `;
+        }
       }
     }
 
-    function renderMetrics(today, todayTokenUsage) {
-      const entries = Object.entries(today || {}).filter(([key, value]) => metricDefinitions[key] && Number(value) > 0);
-      if (!entries.length) return;
-      el('metrics').innerHTML = entries.map(([key, value], index) => {
-        const def = metricDefinitions[key];
-        const isToken = key === 'tokens';
-        const displayValue = isToken ? formatTokenCompact(value, todayTokenUsage?.total_label).toUpperCase() : Number(value).toLocaleString('zh-CN');
-        const note = isToken && todayTokenUsage
-          ? `${Number(todayTokenUsage.sessions || 0).toLocaleString('zh-CN')} 个会话 · 输入 ${formatTokenCompact(todayTokenUsage.input, todayTokenUsage.input_label).toUpperCase()} · 输出 ${formatTokenCompact(todayTokenUsage.output, todayTokenUsage.output_label).toUpperCase()}`
-          : def.note;
-        const title = isToken && todayTokenUsage
-          ? `总量 ${formatTokenExact(todayTokenUsage.total)}；输入 ${formatTokenExact(todayTokenUsage.input)}；输出 ${formatTokenExact(todayTokenUsage.output)}；缓存命中 ${formatTokenExact(todayTokenUsage.cached)}`
-          : '';
-        return `<article class="metric-card" title="${escapeHtml(title)}" style="--metric-color:${def.color};animation-delay:${index * 45}ms"><span class="metric-mark">${def.mark}</span><div class="metric-label">${def.label}</div><div class="metric-value">${escapeHtml(displayValue)}</div><div class="metric-note">${escapeHtml(note)}</div></article>`;
-      }).join('');
-      el('metrics').hidden = false;
-    }
-
-    function renderRecent(items) {
-      if (!Array.isArray(items) || !items.length) return;
-      el('recent-count').textContent = `${items.length} ITEMS`;
-      el('recent-list').innerHTML = items.map(item => {
-        const status = String(item.status || '').toLowerCase();
-        return `<article class="session" style="--status-color:${statusColor[status] || '#83918d'}"><span class="session-dot"></span><div><div class="session-title">${escapeHtml(item.title)}</div><div class="session-meta"><span>${escapeHtml(statusLabel[status] || status)}</span>${item.model ? `<span class="session-model">${escapeHtml(item.model)}</span>` : ''}</div></div><div class="session-side">${escapeHtml(formatShortTime(item.updated_at))}${item.duration ? `<br>${escapeHtml(item.duration)}` : ''}</div></article>`;
-      }).join('');
-      el('recent-panel').hidden = false;
-    }
-
-    function renderBars(items, targetId, panelId) {
+    function renderBars(items, targetId) {
       if (!Array.isArray(items) || !items.length) return;
       const max = Math.max(...items.map(item => Number(item.count) || 0));
       if (!max) return;
-      el(targetId).innerHTML = items.map(item => `<div class="bar-row"><div class="bar-label"><span>${escapeHtml(item.name)}</span><b>${Number(item.count).toLocaleString('zh-CN')}</b></div><div class="bar-track"><div class="bar-fill" style="--width:${Math.max(4, Number(item.count) / max * 100)}%"></div></div></div>`).join('');
-      el(panelId).hidden = false;
+      el(targetId).innerHTML = items.slice(0, 4).map(item => `
+        <div class="bar-row">
+          <div class="bar-label">
+            <span>${escapeHtml(item.name)}</span>
+            <b>${Number(item.count).toLocaleString('zh-CN')}</b>
+          </div>
+          <div class="bar-track">
+            <div class="bar-fill" style="--width:${Math.max(4, Number(item.count) / max * 100)}%"></div>
+          </div>
+        </div>
+      `).join('');
     }
 
     function renderActivity(items) {
@@ -729,40 +1144,167 @@
       if (!max) return;
       const chart = el('activity-chart');
       chart.style.setProperty('--columns', items.length);
-      chart.innerHTML = items.map(item => `<div class="activity-col"><div class="activity-bar" style="--height:${Math.max(5, Number(item.count) / max * 100)}%"><b>${Number(item.count)}</b></div><div class="activity-day">${escapeHtml(formatDay(item.day))}</div></div>`).join('');
-      el('activity-panel').hidden = false;
+      chart.innerHTML = items.map(item => `
+        <div class="activity-col">
+          <div class="activity-bar" style="--height:${Math.max(6, Number(item.count) / max * 100)}%" title="${item.day}: ${item.count}次"></div>
+          <div class="activity-day">${escapeHtml(formatDay(item.day))}</div>
+        </div>
+      `).join('');
     }
 
-    function renderContext(item) {
-      if (!item || !(Number(item.size) > 0) || !(Number(item.used) > 0)) return;
-      const percent = Math.max(0, Math.min(100, Number(item.percent) || 0));
-      el('context-gauge').style.setProperty('--percent', percent);
-      el('context-percent').textContent = `${percent}%`;
-      el('context-session').textContent = item.session || '最近会话';
-      el('context-numbers').textContent = `${item.used_label || item.used} / ${item.size_label || item.size}`;
-      el('context-panel').hidden = false;
-    }
-
-    function renderWorkspaces(items) {
+    function renderRecent(items) {
       if (!Array.isArray(items) || !items.length) return;
-      el('workspace-list').innerHTML = items.map(item => `<div class="workspace"><span class="workspace-name">${escapeHtml(item.name)}</span>${item.last_opened_at ? `<span class="workspace-time">↗ ${escapeHtml(formatShortTime(item.last_opened_at))}</span>` : ''}</div>`).join('');
-      el('workspace-panel').hidden = false;
-    }
-
-    function renderAutomations(items) {
-      if (!Array.isArray(items) || !items.length) return;
-      el('automation-count').textContent = `${items.length} CONFIGURED`;
-      el('automation-list').innerHTML = items.map(item => {
-        const status = String(item.status || '').toLowerCase();
-        const timing = item.next_run_at ? `下次 ${formatShortTime(item.next_run_at)}` : item.last_run_at ? `上次 ${formatShortTime(item.last_run_at)}` : '';
-        return `<article class="automation"><div class="automation-name">${escapeHtml(item.name)}</div><div class="automation-meta"><span style="color:${statusColor[status] || '#83918d'}">${escapeHtml(statusLabel[status] || status)}</span><span>${escapeHtml(timing)}</span></div></article>`;
+      el('recent-count').textContent = `${items.length} SESSIONS`;
+      el('recent-list').innerHTML = items.slice(0, 8).map(item => {
+        const st = String(item.status || '').toLowerCase();
+        return `
+          <div class="session-item">
+            <span class="session-dot" style="--dot-color:${statusColor[st] || '#83918d'}"></span>
+            <div>
+              <div class="session-title">${escapeHtml(item.title)}</div>
+              <div class="session-meta">
+                <span>${escapeHtml(statusLabel[st] || st)}</span>
+                ${item.model ? ` · <span>${escapeHtml(item.model)}</span>` : ''}
+              </div>
+            </div>
+            <div class="session-time">${escapeHtml(formatShortTime(item.updated_at))}</div>
+          </div>
+        `;
       }).join('');
-      el('automation-panel').hidden = false;
     }
 
-    function revealDashboardIfNeeded() {
-      const visiblePanels = [...document.querySelectorAll('.dashboard-grid .panel')].some(panel => !panel.hidden);
-      el('dashboard-grid').hidden = !visiblePanels;
+    let cachedNetwork = null;
+    let wifiConfigMode = false;
+
+    function renderSignalBars(rssi) {
+      const val = Number(rssi);
+      if (!val || isNaN(val) || val === 0) {
+        return `<span class="signal-bars"><span class="signal-bar"></span><span class="signal-bar"></span><span class="signal-bar"></span><span class="signal-bar"></span></span> <span style="color:var(--faint);">未连接</span>`;
+      }
+      let bars = 1;
+      let cls = 'poor';
+      let desc = '较弱';
+      if (val >= -55) { bars = 4; cls = 'active'; desc = '极佳'; }
+      else if (val >= -70) { bars = 3; cls = 'active'; desc = '良好'; }
+      else if (val >= -80) { bars = 2; cls = 'warn'; desc = '一般'; }
+
+      let html = '<span class="signal-bars">';
+      for (let i = 1; i <= 4; i++) {
+        html += `<span class="signal-bar ${i <= bars ? cls : ''}"></span>`;
+      }
+      html += `</span> <span>${val}dBm (${desc})</span>`;
+      return html;
+    }
+
+    function renderNetwork(network) {
+      cachedNetwork = network;
+      const port = String(network?.serial_port || '');
+      const paired = Array.isArray(network?.paired_devices) ? network.paired_devices.length : 0;
+      const clients = Number(network?.wireless_clients || 0);
+      const device = network?.device || {};
+      const ssid = String(device.ssid || '').trim();
+      const ip = String(device.ip || device.network_ip || '').trim();
+      const rssi = device.rssi ?? device.network_rssi ?? 0;
+      const hostIp = String(network?.host_ip || '').trim();
+
+      el('wifi-usb-status').textContent = port ? port.split('/').pop() : '未连接';
+      el('wifi-pair-status').textContent = paired ? `${paired} 台` : '未配对';
+      el('wifi-client-status').textContent = `${clients} 台`;
+      el('wifi-signal-status').innerHTML = renderSignalBars(rssi);
+      el('wifi-host-hint').textContent = hostIp
+        ? `当前本机 Host IP：${hostIp}；通常可留空自动发现。`
+        : '当前本机 Host IP：暂时无法检测；通常可留空自动发现。';
+
+      const isConnected = !!(ssid || (ip && ip !== '0.0.0.0' && ip !== 'OFFLINE') || clients > 0);
+
+      if (isConnected && !wifiConfigMode) {
+        el('wifi-connected-view').hidden = false;
+        el('wifi-config-view').hidden = true;
+        el('wifi-cancel-config-btn').hidden = false;
+
+        el('wifi-connected-ssid').textContent = ssid || '已配置局域网';
+        el('wifi-connected-ip').textContent = ip || '自动获取中';
+        el('wifi-connected-signal').innerHTML = renderSignalBars(rssi);
+        el('wifi-connected-stream').textContent = clients > 0 ? `活跃连接 (${clients} 台在线)` : (paired > 0 ? `已安全配对 (${paired} 台)` : '局域网待命');
+      } else {
+        el('wifi-connected-view').hidden = true;
+        el('wifi-config-view').hidden = false;
+        el('wifi-cancel-config-btn').hidden = !isConnected;
+      }
+    }
+
+    async function wifiRequest(path, body = {}) {
+      const response = await fetch(apiUrl(path), {
+        method: 'POST', cache: 'no-store',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(body)
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || `HTTP ${response.status}`);
+      if (data.type === 'WIFI_CONFIG_ERROR') {
+        throw new Error(`${data.code || 'WIFI_CONFIG_FAILED'}: ${data.message || 'Wi-Fi 配置失败'}`);
+      }
+      return data;
+    }
+
+    async function withWifiBusy(button, action) {
+      const message = el('wifi-message');
+      button.disabled = true;
+      message.classList.remove('is-error');
+      try { await action(message); }
+      catch (error) { message.textContent = error.message || '操作失败'; message.classList.add('is-error'); }
+      finally { button.disabled = false; }
+    }
+
+    function pairDevice() {
+      return withWifiBusy(el('wifi-pair-button'), async message => {
+        message.textContent = '正在通过 USB 建立安全配对…';
+        const data = await wifiRequest('/api/wifi/pair');
+        message.textContent = `配对成功：${data.device_id || 'ESP32-S3'}`;
+        fetchDashboard();
+      });
+    }
+
+    function scanWifi() {
+      return withWifiBusy(el('wifi-scan-button'), async message => {
+        message.textContent = '正在由开发板扫描 2.4GHz 网络…';
+        const data = await wifiRequest('/api/wifi/scan');
+        const networks = Array.isArray(data.networks) ? data.networks : [];
+        const select = el('wifi-ssid');
+        select.innerHTML = networks.length
+          ? networks.map(item => `<option value="${escapeHtml(item.ssid)}">${escapeHtml(item.ssid)} · ${Number(item.rssi || 0)} dBm</option>`).join('')
+          : '<option value="">没有找到 2.4GHz Wi-Fi</option>';
+        message.textContent = `扫描完成，共找到 ${networks.length} 个网络。`;
+      });
+    }
+
+    function unpairDevice() {
+      return withWifiBusy(el('wifi-unpair-button'), async message => {
+        message.textContent = '正在解除配对…';
+        await wifiRequest('/api/wifi/unpair');
+        message.textContent = '已解除配对。';
+        fetchDashboard();
+      });
+    }
+
+    function saveWifi() {
+      return withWifiBusy(el('wifi-save-button'), async message => {
+        const manualSsid = el('wifi-manual-ssid').value.trim();
+        const ssid = manualSsid || el('wifi-ssid').value.trim();
+        const password = el('wifi-password').value;
+        const manual_host_ip = el('wifi-host-ip').value.trim();
+        if (!ssid) throw new Error('请选择 Wi-Fi 网络或手动输入 SSID');
+        message.textContent = '正在验证 Wi-Fi 与 Host 鉴权…';
+        try {
+          const data = await wifiRequest('/api/wifi/config', {ssid, password, manual_host_ip});
+          message.textContent = `配置成功：${data.ip || ssid}`;
+          message.classList.add('is-success');
+          wifiConfigMode = false;
+        } finally {
+          el('wifi-password').value = '';
+        }
+        fetchDashboard();
+      });
     }
 
     function setConnected(connected) {
@@ -771,11 +1313,6 @@
     }
 
     let lastDataSignature = '';
-    function resetDataSections() {
-      el('metrics').hidden = true;
-      for (const panel of document.querySelectorAll('.dashboard-grid .panel')) panel.hidden = true;
-    }
-
     async function fetchDashboard() {
       try {
         const response = await fetch(BRIDGE_API_URL, { cache: 'no-store' });
@@ -783,35 +1320,47 @@
         const data = await response.json();
         setConnected(true);
         renderLive(data.live || {});
-        el('last-sync').textContent = `Last sync · ${formatClock(data.generated_at)}`;
+        syncActiveTasks(data.live || {}, data.recent_sessions || []);
+        el('last-sync').textContent = `LAST SYNC · ${formatClock(data.generated_at)}`;
+
         const signature = JSON.stringify({
-          today: data.today, recent_sessions: data.recent_sessions, activity: data.activity,
-          context_usage: data.context_usage, today_token_usage: data.today_token_usage, models: data.models, tools: data.tools,
-          workspaces: data.workspaces, automations: data.automations
+          recent_sessions: data.recent_sessions, activity: data.activity,
+          today_token_usage: data.today_token_usage, models: data.models, tools: data.tools,
+          network: data.network
         });
+
         if (signature !== lastDataSignature) {
-          resetDataSections();
-          renderMetrics(data.today, data.today_token_usage);
           renderRecent(data.recent_sessions);
           renderActivity(data.activity);
-          renderContext(data.context_usage);
-          renderBars(data.models, 'model-list', 'model-panel');
-          renderBars(data.tools, 'tool-list', 'tool-panel');
-          renderWorkspaces(data.workspaces);
-          renderAutomations(data.automations);
-          revealDashboardIfNeeded();
+          renderBars(data.tools, 'tool-list');
+          renderBars(data.models, 'model-list');
+          if (Array.isArray(data.tools)) {
+            const totalCalls = data.tools.reduce((sum, item) => sum + (Number(item.count) || 0), 0);
+            el('tool-count').textContent = `${totalCalls} CALLS`;
+          }
+          renderNetwork(data.network || {});
           lastDataSignature = signature;
         }
       } catch (error) {
         setConnected(false);
-        el('hero-live-title').textContent = '无法连接本地 Bridge';
-        el('hero-live-desc').textContent = '请确认 Workbuddy 状态机守护进程正在运行';
       }
     }
 
     setInterval(() => { el('top-clock').textContent = new Date().toTimeString().slice(0, 8); }, 1000);
     setInterval(fetchDashboard, 1500);
     el('top-clock').textContent = new Date().toTimeString().slice(0, 8);
+    el('wifi-pair-button').addEventListener('click', pairDevice);
+    el('wifi-unpair-button').addEventListener('click', unpairDevice);
+    el('wifi-scan-button').addEventListener('click', scanWifi);
+    el('wifi-save-button').addEventListener('click', saveWifi);
+    el('wifi-toggle-config-btn').addEventListener('click', () => {
+      wifiConfigMode = true;
+      if (cachedNetwork) renderNetwork(cachedNetwork);
+    });
+    el('wifi-cancel-config-btn').addEventListener('click', () => {
+      wifiConfigMode = false;
+      if (cachedNetwork) renderNetwork(cachedNetwork);
+    });
     fetchDashboard();
   </script>
 </body>

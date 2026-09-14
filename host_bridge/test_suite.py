@@ -239,12 +239,19 @@ class TestRunner:
                 lines = f.readlines()
                 if lines:
                     last_log_line = lines[-1].strip()
-                    for line in reversed(lines[-20:]):
-                        if "[板端] [HUD] OK" in line or "成功连接开发板" in line:
+                    for line in reversed(lines[-50:]):
+                        if any(marker in line for marker in [
+                            "[板端] [HUD] OK",
+                            "成功连接开发板",
+                            "connection open",
+                            "AUTH_OK",
+                            "WIFI_CONNECTED",
+                            "WiFi 状态机已就绪"
+                        ]):
                             recent_ok = True
                             break
 
-        self.record("硬件与串口", "板端实时回执校验 (Serial Feedback)", recent_ok, f"最新日志: {last_log_line[:60]}...", 0.0)
+        self.record("硬件通信链路", "板端实时连接与回执校验 (USB/Wi-Fi Feedback)", recent_ok, f"最新日志: {last_log_line[:60]}...", 0.0)
 
     def print_summary(self):
         print("\n" + "="*50)

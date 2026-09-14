@@ -1,7 +1,7 @@
 # Workbuddy 桌面硬件状态机 (ESP32-S3 Desktop HUD)
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v1.0.0-00E5FF.svg" alt="Version">
+  <img src="https://img.shields.io/badge/version-v2.0.0-00E5FF.svg" alt="Version">
   <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License">
   <img src="https://img.shields.io/badge/ESP32--S3-N16R8-orange.svg" alt="Hardware">
   <br>
@@ -14,7 +14,9 @@
 
 **Workbuddy 桌面硬件状态机** 是为 Workbuddy / AI Agent 打造的物理桌面级智能状态提示器（HUD）。通过 USB 串口或本地 HTTP API，将 AI 助手在执行任务时的**实时状态、任务标题、耗时、调用工具次数、Token 消耗以及步骤时间线**毫秒级投射到 2.0 寸 320×240 IPS 屏幕与 Web 聚合看板上。
 
-当 AI Agent 需要人类介入（提问回答 `NEED_ANSWER`、高危操作审批 `NEED_APPROVAL`、异常报错 `ERROR`）时，HUD 会以高亮视觉聚焦提示，并支持通过开发板上的 **BOOT 实体物理按键** 一键确认回传给主机。
+稳定的 USB 有线基线为 **V1.1**（Git Tag `v1.1.0`）。**V2.0**（Git Tag `v2.0.0`）已全面支持 **USB 安全配网 + Wi-Fi 无线自动连接推流**：配置阶段通过 USB CDC 写入 WiFi 凭据与配对密钥，日常运行时只需接 Type-C 独立电源即可自动连接 2.4GHz Wi-Fi 并通过 WebSocket 实时同步，彻底摆脱数据线束缚。详见 [`WIFI_SCHEME_V2_0.md`](WIFI_SCHEME_V2_0.md)。
+
+当 AI Agent 需要人类介入（提问回答 `NEED_ANSWER`、高危操作审批 `NEED_APPROVAL`、异常报错 `ERROR`）时，HUD 会以高亮视觉聚焦提示。BOOT 键事件能回传到主机；真实 Approve 接入仍属 P1 `NO-GO`，不会通过 UI 自动化代替官方审批接口。
 
 <p align="center">
   <img src="docs/images/dashboard_preview.png" alt="Workbuddy Bridge Dashboard Preview" width="100%">
@@ -43,6 +45,11 @@
    - **Web 数据看板**：提供 `http://127.0.0.1:5200/bridge` 数据聚合看板与 `/monitor` 网页 HUD 映射。
    - **完成 Token 凭据**：任务完成后按 `sessionId` 匹配真实 Trace，在 HUB 展示本轮总 Token 及输入、输出、缓存命中与模型调用数。
    - **今日 Token 汇总**：聚合当日所有绑定会话的 Agent Trace，独立显示所有会话 Token 总消耗，并排除标题生成等无会话 Trace。
+
+5. **V2.0 USB 配网、Wi-Fi 运行**：
+   - Dashboard 仅绑定 `127.0.0.1:5200`，通过 USB 扫描 2.4GHz Wi-Fi、安全配对、写入密码与可选 Host IP。
+   - 配对密钥保存到 macOS Keychain；密码不写入浏览器存储，日志进行递归脱敏。
+   - 日常推流使用 UDP 5202 发现 + WebSocket 5201 长连接，并保留 USB 兼容通道。
 
 ---
 
@@ -94,19 +101,24 @@
 │   └── src/
 │       ├── bsp_board.h/cpp    # 立创实战派硬件驱动 (PCA9557 / LCD_CS / 背光)
 │       ├── display_hud.h/cpp  # 320x240 HUD 渲染引擎
-│       └── main.cpp           # 串口协议解析与状态机主循环
+│       ├── wifi_v2.h/cpp      # Wi-Fi、NVS、发现、鉴权与 WebSocket FSM
+│       └── main.cpp           # USB/V2 协议解析与状态机主循环
 ├── host_bridge/               # 电脑端中继与测试套件 (Python)
 │   ├── daemon.py              # 全自动感知守护进程 & Web API 服务
+│   ├── v2_transport.py        # V2.0 配网、鉴权、发现与统一推流
 │   ├── bridge.py              # 串口自动发现与状态机仿真推流
 │   ├── live_bridge.py         # 实时会话桥接推流
 │   ├── send_status.py         # 单帧状态测试发送工具
 │   ├── terminal_hud.py        # 终端纯文本 HUD 监控
 │   ├── test_suite.py          # 接口契约与并发压力测试套件
+│   ├── test_v2_transport.py   # V2.0 协议与安全单测
 │   └── requirements.txt       # Python 依赖清单
 ├── bridge_dashboard.html      # Web 数据看板前端
 ├── web_hud.html               # Web HUD 映射页面
 ├── start_daemon.sh            # 后台守护进程一键启动脚本
 ├── stop_daemon.sh             # 停止守护进程脚本
+├── install_macos_service.sh   # 安装 macOS 登录自启 LaunchAgent
+├── macos/                     # LaunchAgent 定义
 ├── run_hud.command            # 快捷启动终端 HUD (macOS)
 ├── run_live_hud.command       # 快捷启动实时推流 (macOS)
 ├── PROJECT_RECORD.md          # 详细开发档案与踩坑记录
@@ -175,12 +187,17 @@ pip install -r host_bridge/requirements.txt
 ### 3. 一键启动守护进程
 
 ```bash
+# macOS 首次安装：登录后自动启动，退出后由 launchd 自动拉起
+./install_macos_service.sh
+
 # 启动后台常驻守护进程 (自动脱离终端)
 ./start_daemon.sh
 
 # 停止守护进程
 ./stop_daemon.sh
 ```
+
+> V2.0 的配对 Host ID 与已配对设备登记会持久化，配对密钥保存在 macOS Keychain。安装脚本会把最小运行副本部署到 `~/Library/Application Support/Workbuddy Desktop HUD`，避免 LaunchAgent 直接读取 `Documents` 被 macOS TCC 拦截。Mac 重启并重新登录后，LaunchAgent 会自动恢复 Bridge，无需重新输入 Wi-Fi 密码或配对。
 
 ### 4. 访问 Web 看板与 Monitor
 
@@ -191,6 +208,13 @@ pip install -r host_bridge/requirements.txt
 - **聚合数据 API**：`http://127.0.0.1:5200/api/bridge`
 
 > 开发时也可以直接打开 `bridge_dashboard.html`。页面在 `file://` 模式下会自动连接 `http://127.0.0.1:5200/api/bridge`；正式 HTTP 入口仍使用同源 `/api/bridge`。
+
+### 5. V2.0 首次 Wi-Fi 配置
+
+1. 保持开发板通过 USB 连接电脑，打开 `http://127.0.0.1:5200/bridge`。
+2. 在「V2.0 Wi-Fi 配置」卡片中点击「安全配对」和「扫描 2.4G Wi-Fi」。
+3. 选择网络，只在本机页面输入密码，再点击「保存并验证连接」。不要在聊天中发送 Wi-Fi 密码。
+4. 显示配置成功后，拔掉 USB 数据线，改用独立 5V 电源完成 Gate 3 纯无线实测。
 
 ---
 

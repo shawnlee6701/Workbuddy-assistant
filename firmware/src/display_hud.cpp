@@ -77,6 +77,21 @@ void DisplayHud::testPanel() {
     nativeLcdDraw(_canvas.getBuffer());
 }
 
+void DisplayHud::showSystemMessage(const String& title, const String& detail, uint16_t color) {
+    _canvas.fillScreen(COLOR_BG);
+    _canvas.drawRect(0, 0, 320, 240, COLOR_BORDER);
+    _canvas.fillRoundRect(18, 42, 6, 82, 3, color);
+    _canvas.setTextSize(2);
+    _canvas.setTextColor(COLOR_TEXT_WHITE, COLOR_BG);
+    _canvas.drawString(title, 36, 48);
+    _canvas.setTextSize(1);
+    _canvas.setTextColor(COLOR_TEXT_MUTED, COLOR_BG);
+    _canvas.drawString(detail, 36, 88);
+    _canvas.setTextColor(color, COLOR_BG);
+    _canvas.drawString("WORKBUDDY · V2.0", 36, 114);
+    nativeLcdDraw(_canvas.getBuffer());
+}
+
 void DisplayHud::drawHeader(const HudData& data) {
     _canvas.setTextSize(1);
     _canvas.setTextColor(COLOR_TEXT_WHITE, COLOR_BG);
@@ -100,6 +115,15 @@ void DisplayHud::drawHeader(const HudData& data) {
     
     // 状态指示圆点随当前状态动态变色
     _canvas.fillCircle(308, 16, 4, getStateColor(data.state));
+
+    String network = data.networkStatus;
+    if (data.networkRssi != 0) network += " " + String(data.networkRssi) + "dBm";
+    _canvas.setTextColor(data.networkStatus == "Wi-Fi 在线" ? COLOR_STATE_COMPLETED : COLOR_TEXT_DIM, COLOR_BG);
+    _canvas.drawString(network, 12, 26);
+    if (!data.networkIp.isEmpty()) {
+        int32_t ipX = 308 - _canvas.textWidth(data.networkIp);
+        _canvas.drawString(data.networkIp, ipX, 26);
+    }
 }
 
 void DisplayHud::drawAlertCard(const HudData& data) {
